@@ -34,3 +34,10 @@ Transactions
 ```ruby
 hiredis.multi(["INCR", "bar"], ["GET", "foo"])
 ```
+
+Reply Error Handling
+--------------
+
+When you get a reply back, you have to check if it is a Subclass of "Hiredis::ReplyError", this was done so pipelined transactions can complete even if there are errors.
+
+All other Errors throw Exceptions, which are Subclasses of "Hiredis::Error", except when it is a "EOFError".
