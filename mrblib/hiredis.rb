@@ -1,10 +1,10 @@
 class Hiredis
   def multi(*commands)
-    append('MULTI')
+    append(:multi)
     commands.each do |command|
       append(*command)
     end
-    append('EXEC')
+    append(:exec)
     ret = []
     (2+commands.size).times do
       ret << reply

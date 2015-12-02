@@ -116,15 +116,21 @@ mrb_redisCommandArgv(mrb_state *mrb, mrb_value self)
 {
   redisContext *context = (redisContext *) DATA_PTR(self);
 
+  mrb_sym command;
   mrb_value *mrb_argv;
   mrb_int argc;
 
-  mrb_get_args(mrb, "*", &mrb_argv, &argc);
+  mrb_get_args(mrb, "n*", &command, &mrb_argv, &argc);
+  argc++;
 
   const char *argv[argc];
   size_t argvlen[argc];
-  for (mrb_int argc_current = 0; argc_current < argc; argc_current++) {
-    mrb_value curr = mrb_str_to_str(mrb, mrb_argv[argc_current]);
+  mrb_int command_len;
+  argv[0] = mrb_sym2name_len(mrb, command, &command_len);
+  argvlen[0] = command_len;
+
+  for (mrb_int argc_current = 1; argc_current < argc; argc_current++) {
+    mrb_value curr = mrb_str_to_str(mrb, mrb_argv[argc_current - 1]);
     argv[argc_current] = RSTRING_PTR(curr);
     argvlen[argc_current] = RSTRING_LEN(curr);
   }
@@ -162,15 +168,21 @@ mrb_redisAppendCommandArgv(mrb_state *mrb, mrb_value self)
 {
   redisContext *context = (redisContext *) DATA_PTR(self);
 
+  mrb_sym command;
   mrb_value *mrb_argv;
   mrb_int argc;
 
-  mrb_get_args(mrb, "*", &mrb_argv, &argc);
+  mrb_get_args(mrb, "n*", &command, &mrb_argv, &argc);
+  argc++;
 
   const char *argv[argc];
   size_t argvlen[argc];
-  for (mrb_int argc_current = 0; argc_current < argc; argc_current++) {
-    mrb_value curr = mrb_str_to_str(mrb, mrb_argv[argc_current]);
+  mrb_int command_len;
+  argv[0] = mrb_sym2name_len(mrb, command, &command_len);
+  argvlen[0] = command_len;
+
+  for (mrb_int argc_current = 1; argc_current < argc; argc_current++) {
+    mrb_value curr = mrb_str_to_str(mrb, mrb_argv[argc_current - 1]);
     argv[argc_current] = RSTRING_PTR(curr);
     argvlen[argc_current] = RSTRING_LEN(curr);
   }
@@ -243,8 +255,8 @@ void mrb_mruby_hiredis_gem_init(mrb_state* mrb)
   mrb_define_class_under(mrb, hiredis_class, "OOMError", hiredis_error_class);
 
   mrb_define_method(mrb, hiredis_class, "initialize", mrb_hiredis_init,           MRB_ARGS_OPT(2));
-  mrb_define_method(mrb, hiredis_class, "call",       mrb_redisCommandArgv,       MRB_ARGS_ANY());
-  mrb_define_method(mrb, hiredis_class, "append",     mrb_redisAppendCommandArgv, MRB_ARGS_ANY());
+  mrb_define_method(mrb, hiredis_class, "call",       mrb_redisCommandArgv,       (MRB_ARGS_REQ(1)|MRB_ARGS_REST()));
+  mrb_define_method(mrb, hiredis_class, "append",     mrb_redisAppendCommandArgv, (MRB_ARGS_REQ(1)|MRB_ARGS_REST()));
   mrb_define_method(mrb, hiredis_class, "reply",      mrb_redisGetReply,          MRB_ARGS_NONE());
   mrb_define_method(mrb, hiredis_class, "reconnect",  mrb_redisReconnect,         MRB_ARGS_NONE());
 }
