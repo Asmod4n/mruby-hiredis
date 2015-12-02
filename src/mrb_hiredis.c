@@ -216,6 +216,19 @@ mrb_redisGetReply(mrb_state *mrb, mrb_value self)
   return self;
 }
 
+static mrb_value
+mrb_redisReconnect(mrb_state *mrb, mrb_value self)
+{
+  redisContext *context = (redisContext *) DATA_PTR(self);
+
+  int rc = redisReconnect(context);
+  if (unlikely(rc == REDIS_ERR)) {
+    mrb_hiredis_check_error(context, mrb);
+  }
+
+  return self;
+}
+
 void mrb_mruby_hiredis_gem_init(mrb_state* mrb)
 {
   struct RClass *hiredis_class, *hiredis_error_class;
@@ -230,6 +243,7 @@ void mrb_mruby_hiredis_gem_init(mrb_state* mrb)
   mrb_define_method(mrb, hiredis_class, "call",       mrb_redisCommandArgv,       MRB_ARGS_ANY());
   mrb_define_method(mrb, hiredis_class, "append",     mrb_redisAppendCommandArgv, MRB_ARGS_ANY());
   mrb_define_method(mrb, hiredis_class, "reply",      mrb_redisGetReply,          MRB_ARGS_NONE());
+  mrb_define_method(mrb, hiredis_class, "reconnect",  mrb_redisReconnect,         MRB_ARGS_NONE());
 }
 
 void mrb_mruby_hiredis_gem_final(mrb_state* mrb)
