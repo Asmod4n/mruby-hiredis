@@ -18,6 +18,7 @@ class Hiredis
           call(command, *args)
         end
       end
+      self
     end
   end
 

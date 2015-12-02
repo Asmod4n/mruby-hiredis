@@ -252,7 +252,7 @@ void mrb_mruby_hiredis_gem_init(mrb_state* mrb)
   hiredis_error_class = mrb_define_class_under(mrb, hiredis_class, "Error", E_RUNTIME_ERROR);
   mrb_define_class_under(mrb, hiredis_class, "ReplyError",    hiredis_error_class);
   mrb_define_class_under(mrb, hiredis_class, "ProtocolError", hiredis_error_class);
-  mrb_define_class_under(mrb, hiredis_class, "OOMError", hiredis_error_class);
+  mrb_define_class_under(mrb, hiredis_class, "OOMError",      hiredis_error_class);
 
   mrb_define_method(mrb, hiredis_class, "initialize", mrb_hiredis_init,           MRB_ARGS_OPT(2));
   mrb_define_method(mrb, hiredis_class, "call",       mrb_redisCommandArgv,       (MRB_ARGS_REQ(1)|MRB_ARGS_REST()));

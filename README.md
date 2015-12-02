@@ -7,19 +7,28 @@ Examples
 Connect to the default redis-server
 ```ruby
 hiredis = Hiredis.new
-hiredis.call(:command)
 ```
 
 Connect to a tcp redis-server
 ```ruby
 hiredis = Hiredis.new("localhost", 6379) #if you leave the port out it defaults to 6379
-hiredis.call(:command)
 ```
 
 Connect to a unix redis-server
 ```ruby
-hiredis = Hiredis.new("/tmp/redis.sock", -1)
-hiredis.call(:command)
+hiredis = Hiredis.new("/tmp/redis.sock", -1) #set port to -1 so it connects to a unix socket
+```
+
+All Redis Commands are mapped to Ruby Methods, this happens automatically when you connect the first time to a Server.
+```ruby
+hiredis["foo"] = "bar"
+hiredis["foo"]
+hiredis.incr("bar")
+```
+
+If you later on want to add more shortcut methods, because the first Server you connected to is of a lower version than the others, you can call
+```ruby
+Hiredis.create_shortcuts(hiredis)
 ```
 
 Pipelining
