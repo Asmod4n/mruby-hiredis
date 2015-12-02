@@ -13,7 +13,7 @@ extern "C" {
 #define E_EOF_ERROR (mrb_class_get(mrb, "EOFError"))
 #endif
 #define E_REDIS_ERR_PROTOCOL (mrb_class_get_under(mrb, mrb_class_get(mrb, "Hiredis"), "ProtocolError"))
-
+#define E_REDIS_ERR_OOM (mrb_class_get_under(mrb, mrb_class_get(mrb, "Hiredis"), "OOMError"))
 
 #ifdef __cplusplus
 }

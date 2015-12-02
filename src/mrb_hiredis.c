@@ -17,19 +17,17 @@ mrb_hiredis_check_error(redisContext *context, mrb_state *mrb)
       mrb_sys_fail(mrb, context->errstr);
     } else {
       switch (context->err) {
-        case REDIS_ERR_EOF: {
-          mrb_value err = mrb_str_new_static(mrb, context->errstr, strlen(context->errstr));
-          mrb_raisef(mrb, E_EOF_ERROR, "%S", err);
-        }
+        case REDIS_ERR_EOF:
+          mrb_raise(mrb, E_EOF_ERROR, context->errstr);
           break;
-        case REDIS_ERR_PROTOCOL: {
-          mrb_value err = mrb_str_new_static(mrb, context->errstr, strlen(context->errstr));
-          mrb_raisef(mrb, E_REDIS_ERR_PROTOCOL, "%S", err);
-        }
+        case REDIS_ERR_PROTOCOL:
+          mrb_raise(mrb, E_REDIS_ERR_PROTOCOL, context->errstr);
+          break;
+        case REDIS_ERR_OOM:
+          mrb_raise(mrb, E_REDIS_ERR_OOM, context->errstr);
           break;
         default: {
-          mrb_value err = mrb_str_new_static(mrb, context->errstr, strlen(context->errstr));
-          mrb_raisef(mrb, E_REDIS_ERROR, "%S", err);
+          mrb_raise(mrb, E_REDIS_ERROR, context->errstr);
         }
       }
     }
@@ -238,6 +236,7 @@ void mrb_mruby_hiredis_gem_init(mrb_state* mrb)
   hiredis_error_class = mrb_define_class_under(mrb, hiredis_class, "Error", E_RUNTIME_ERROR);
   mrb_define_class_under(mrb, hiredis_class, "ReplyError",    hiredis_error_class);
   mrb_define_class_under(mrb, hiredis_class, "ProtocolError", hiredis_error_class);
+  mrb_define_class_under(mrb, hiredis_class, "OOMError", hiredis_error_class);
 
   mrb_define_method(mrb, hiredis_class, "initialize", mrb_hiredis_init,           MRB_ARGS_OPT(2));
   mrb_define_method(mrb, hiredis_class, "call",       mrb_redisCommandArgv,       MRB_ARGS_ANY());
