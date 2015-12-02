@@ -68,7 +68,6 @@ mrb_hiredis_get_reply(redisReply *reply, mrb_state *mrb)
 {
   switch (reply->type) {
     case REDIS_REPLY_STRING:
-    case REDIS_REPLY_STATUS:
       return mrb_str_new(mrb, reply->str, reply->len);
       break;
     case REDIS_REPLY_ARRAY:
@@ -83,6 +82,11 @@ mrb_hiredis_get_reply(redisReply *reply, mrb_state *mrb)
       break;
     case REDIS_REPLY_NIL:
       return mrb_nil_value();
+      break;
+    case REDIS_REPLY_STATUS: {
+      mrb_sym status = mrb_intern(mrb, reply->str, reply->len);
+      return mrb_symbol_value(status);
+    }
       break;
     case REDIS_REPLY_ERROR: {
       mrb_value err = mrb_str_new(mrb, reply->str, reply->len);
