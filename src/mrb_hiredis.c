@@ -256,7 +256,7 @@ void mrb_mruby_hiredis_gem_init(mrb_state* mrb)
 
   mrb_define_method(mrb, hiredis_class, "initialize", mrb_hiredis_init,           MRB_ARGS_OPT(2));
   mrb_define_method(mrb, hiredis_class, "call",       mrb_redisCommandArgv,       (MRB_ARGS_REQ(1)|MRB_ARGS_REST()));
-  mrb_define_method(mrb, hiredis_class, "append",     mrb_redisAppendCommandArgv, (MRB_ARGS_REQ(1)|MRB_ARGS_REST()));
+  mrb_define_method(mrb, hiredis_class, "queue",      mrb_redisAppendCommandArgv, (MRB_ARGS_REQ(1)|MRB_ARGS_REST()));
   mrb_define_method(mrb, hiredis_class, "reply",      mrb_redisGetReply,          MRB_ARGS_NONE());
   mrb_define_method(mrb, hiredis_class, "reconnect",  mrb_redisReconnect,         MRB_ARGS_NONE());
 }

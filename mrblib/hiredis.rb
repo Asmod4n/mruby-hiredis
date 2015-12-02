@@ -22,12 +22,12 @@ class Hiredis
     end
   end
 
-  def multi(*commands)
-    append(:multi)
+  def transaction(*commands)
+    queue(:multi)
     commands.each do |command|
-      append(*command)
+      queue(*command)
     end
-    append(:exec)
+    queue(:exec)
     ret = []
     (2+commands.size).times do
       ret << reply

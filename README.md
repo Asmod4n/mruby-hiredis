@@ -33,15 +33,15 @@ Hiredis.create_shortcuts(hiredis)
 
 Pipelining
 ```ruby
-hiredis.append(:set, "foo", "bar")
-hiredis.append(:get, "foo")
+hiredis.queue(:set, "foo", "bar")
+hiredis.queue(:get, "foo")
 hiredis.reply
 hiredis.reply
 ```
 
 Transactions
 ```ruby
-hiredis.multi([:incr, "bar"], [:get, "foo"])
+hiredis.transaction([:incr, "bar"], [:get, "foo"])
 ```
 
 Reply Error Handling
