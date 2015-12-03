@@ -1,0 +1,15 @@
+sudo: false
+addons:
+  apt:
+    packages:
+      - rake
+      - bison
+      - git
+language: c
+compiler:
+  - gcc
+  - clang
+services:
+  - redis-server
+script:
+  - rake test
