@@ -1,5 +1,4 @@
 assert("Hiredis.new") do
-  assert_raise(Errno::ECONNREFUSED) { Hiredis.new("127.0.0.2") }
   assert_raise(TypeError) { Hiredis.new(17) }
   assert_raise(TypeError) { Hiredis.new("localhost", "foo") }
   assert_nothing_raised { Hiredis.new }
