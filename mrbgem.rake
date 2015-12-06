@@ -7,7 +7,7 @@ MRuby::Gem::Specification.new('mruby-hiredis') do |spec|
   spec.version = Hiredis::VERSION
   spec.add_dependency 'mruby-errno'
 
-  if build.toolchains.include?("androideabi")
+  if build.toolchains.include?('android')
     spec.cc.flags << '-DHAVE_PTHREADS'
   else
     spec.linker.libraries << 'pthread'
