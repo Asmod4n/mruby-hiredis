@@ -26,9 +26,8 @@ mrb_hiredis_check_error(redisContext *context, mrb_state *mrb)
         case REDIS_ERR_OOM:
           mrb_raise(mrb, E_REDIS_ERR_OOM, context->errstr);
           break;
-        default: {
+        default:
           mrb_raise(mrb, E_REDIS_ERROR, context->errstr);
-        }
       }
     }
   }
@@ -114,11 +113,9 @@ mrb_hiredis_get_ary_reply(redisReply *reply, mrb_state *mrb)
 static mrb_value
 mrb_redisCommandArgv(mrb_state *mrb, mrb_value self)
 {
-  redisContext *context = (redisContext *) DATA_PTR(self);
-
   mrb_sym command;
   mrb_value *mrb_argv;
-  mrb_int argc;
+  mrb_int argc = 0;
 
   mrb_get_args(mrb, "n*", &command, &mrb_argv, &argc);
   argc++;
@@ -135,6 +132,7 @@ mrb_redisCommandArgv(mrb_state *mrb, mrb_value self)
     argvlen[argc_current] = RSTRING_LEN(curr);
   }
 
+  redisContext *context = (redisContext *) DATA_PTR(self);
   errno = 0;
   redisReply *reply = redisCommandArgv(context, argc, argv, argvlen);
   if (likely(reply != NULL)) {
@@ -166,11 +164,9 @@ mrb_redisCommandArgv(mrb_state *mrb, mrb_value self)
 static mrb_value
 mrb_redisAppendCommandArgv(mrb_state *mrb, mrb_value self)
 {
-  redisContext *context = (redisContext *) DATA_PTR(self);
-
   mrb_sym command;
   mrb_value *mrb_argv;
-  mrb_int argc;
+  mrb_int argc = 0;
 
   mrb_get_args(mrb, "n*", &command, &mrb_argv, &argc);
   argc++;
@@ -187,6 +183,7 @@ mrb_redisAppendCommandArgv(mrb_state *mrb, mrb_value self)
     argvlen[argc_current] = RSTRING_LEN(curr);
   }
 
+  redisContext *context = (redisContext *) DATA_PTR(self);
   errno = 0;
   int rc = redisAppendCommandArgv(context, argc, argv, argvlen);
   if (unlikely(rc == REDIS_ERR)) {
