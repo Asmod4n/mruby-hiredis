@@ -20,7 +20,7 @@ Connect to a unix redis-server
 hiredis = Hiredis.new("/tmp/redis.sock", -1) #set port to -1 so it connects to a unix socket
 ```
 
-All Redis Commands are mapped to Ruby Methods, this happens automatically when you connect the first time to a Server.
+All [Redis Commands](http://redis.io/commands) are mapped to Ruby Methods, this happens automatically when you connect the first time to a Server.
 ```ruby
 hiredis["foo"] = "bar"
 hiredis["foo"]
