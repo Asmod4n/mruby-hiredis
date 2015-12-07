@@ -13,3 +13,6 @@ services:
   - redis-server
 script:
   - rake test
+os:
+  - linux
+  - osx
