@@ -1,3 +1,7 @@
+unless Object.const_defined?("IOError")
+  class IOError < StandardError; end
+end
+
 unless Object.const_defined?("EOFError")
-  class EOFError < StandardError; end
+  class EOFError < IOError; end
 end

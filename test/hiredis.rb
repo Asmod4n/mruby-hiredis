@@ -50,3 +50,11 @@ assert("Throws EOFError when Server closed connection") do
   assert_raise(EOFError) { hiredis.get("foo") }
 end
 
+assert("Defines IOError when missing") do
+  assert_equal(IOError.superclass, StandardError)
+end
+
+assert("Defines EOFError when missing") do
+  assert_equal(EOFError.superclass, IOError)
+end
+
