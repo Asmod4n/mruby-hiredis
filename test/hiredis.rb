@@ -44,17 +44,11 @@ assert("Hiredis#incr") do
   hiredis.del("mruby-hiredis-test:foo")
 end
 
-assert("Throws EOFError when Server closed connection") do
-  hiredis = Hiredis.new
-  hiredis.call(:quit)
-  assert_raise(EOFError) { hiredis.get("foo") }
-end
-
 assert("Defines IOError when missing") do
-  assert_equal(IOError.superclass, StandardError)
+  assert_equal(StandardError, IOError.superclass)
 end
 
 assert("Defines EOFError when missing") do
-  assert_equal(EOFError.superclass, IOError)
+  assert_equal(IOError, EOFError.superclass)
 end
 
