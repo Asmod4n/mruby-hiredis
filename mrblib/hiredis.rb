@@ -28,11 +28,7 @@ class Hiredis
       queue(*command)
     end
     queue(:exec)
-    ret = []
-    (2+commands.size).times do
-      ret << reply
-    end
-    ret
+    bulk_reply
   end
 
   def [](key)

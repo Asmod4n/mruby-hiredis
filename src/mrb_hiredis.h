@@ -11,6 +11,7 @@
 #include <mruby/throw.h>
 #include <string.h>
 #include <mruby/class.h>
+#include <mruby/variable.h>
 
 static void
 mrb_redisFree(mrb_state *mrb, void *p)
