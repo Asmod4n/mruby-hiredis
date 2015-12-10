@@ -17,6 +17,10 @@ assert("Pipelined commands") do
   assert_equal(:OK,   hiredis.reply)
   assert_equal("bar", hiredis.reply)
 
+  hiredis.queue(:set, "mruby-hiredis-test:foo", "bar")
+  hiredis.queue(:get, "mruby-hiredis-test:foo")
+  assert_equal([:OK, "bar"], hiredis.bulk_reply)
+
   hiredis.queue(:nonexistant)
   assert_kind_of(Hiredis::ReplyError, hiredis.reply)
   hiredis.del("mruby-hiredis-test:foo")
