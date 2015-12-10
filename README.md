@@ -36,13 +36,21 @@ Pipelining
 ```ruby
 hiredis.queue(:set, "foo", "bar")
 hiredis.queue(:get, "foo")
-hiredis.reply
-hiredis.reply
+hiredis.bulk_reply
 ```
 
 Transactions
 ```ruby
 hiredis.transaction([:incr, "bar"], [:get, "foo"])
+```
+
+Subscriptions
+```ruby
+hiredis.subscribe('channel')
+
+loop do
+  puts hiredis.reply
+end
 ```
 
 Reply Error Handling
