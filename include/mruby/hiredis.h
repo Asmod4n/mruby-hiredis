@@ -7,13 +7,13 @@
 extern "C" {
 #endif
 
-#define E_REDIS_ERROR (mrb_class_get_under(mrb, mrb_class_get(mrb, "Hiredis"), "Error"))
-#define E_REDIS_REPLY_ERROR (mrb_class_get_under(mrb, mrb_class_get(mrb, "Hiredis"), "ReplyError"))
+#define E_HIREDIS_ERROR (mrb_class_get_under(mrb, mrb_class_get(mrb, "Hiredis"), "Error"))
+#define E_HIREDIS_REPLY_ERROR (mrb_class_get_under(mrb, mrb_class_get(mrb, "Hiredis"), "ReplyError"))
 #ifndef E_EOF_ERROR
 #define E_EOF_ERROR (mrb_class_get(mrb, "EOFError"))
 #endif
-#define E_REDIS_ERR_PROTOCOL (mrb_class_get_under(mrb, mrb_class_get(mrb, "Hiredis"), "ProtocolError"))
-#define E_REDIS_ERR_OOM (mrb_class_get_under(mrb, mrb_class_get(mrb, "Hiredis"), "OOMError"))
+#define E_HIREDIS_ERR_PROTOCOL (mrb_class_get_under(mrb, mrb_class_get(mrb, "Hiredis"), "ProtocolError"))
+#define E_HIREDIS_ERR_OOM (mrb_class_get_under(mrb, mrb_class_get(mrb, "Hiredis"), "OOMError"))
 
 #ifdef __cplusplus
 }

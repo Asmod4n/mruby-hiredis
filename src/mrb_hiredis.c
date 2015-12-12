@@ -21,13 +21,13 @@ mrb_hiredis_check_error(redisContext *context, mrb_state *mrb)
           mrb_raise(mrb, E_EOF_ERROR, context->errstr);
           break;
         case REDIS_ERR_PROTOCOL:
-          mrb_raise(mrb, E_REDIS_ERR_PROTOCOL, context->errstr);
+          mrb_raise(mrb, E_HIREDIS_ERR_PROTOCOL, context->errstr);
           break;
         case REDIS_ERR_OOM:
-          mrb_raise(mrb, E_REDIS_ERR_OOM, context->errstr);
+          mrb_raise(mrb, E_HIREDIS_ERR_OOM, context->errstr);
           break;
         default:
-          mrb_raise(mrb, E_REDIS_ERROR, context->errstr);
+          mrb_raise(mrb, E_HIREDIS_ERROR, context->errstr);
       }
     }
   }
@@ -89,11 +89,11 @@ mrb_hiredis_get_reply(redisReply *reply, mrb_state *mrb)
       break;
     case REDIS_REPLY_ERROR: {
       mrb_value err = mrb_str_new(mrb, reply->str, reply->len);
-      return mrb_exc_new_str(mrb, E_REDIS_REPLY_ERROR, err);
+      return mrb_exc_new_str(mrb, E_HIREDIS_REPLY_ERROR, err);
     }
       break;
     default:
-      mrb_raise(mrb, E_REDIS_ERROR, "unknown reply type");
+      mrb_raise(mrb, E_HIREDIS_ERROR, "unknown reply type");
   }
 }
 
