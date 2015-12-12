@@ -183,20 +183,20 @@ mrb_redisAppendCommandArgv(mrb_state *mrb, mrb_value self)
     argvlen[argc_current] = RSTRING_LEN(curr);
   }
 
+  mrb_sym queue_counter_sym = mrb_intern_lit(mrb, "queue_counter");
+  mrb_value queue_counter_val = mrb_iv_get(mrb, self, queue_counter_sym);
+  mrb_int queue_counter = 1;
+  if (mrb_fixnum_p(queue_counter_val)) {
+    queue_counter = mrb_fixnum(queue_counter_val);
+    if (mrb_int_add_overflow(queue_counter, 1, &queue_counter)) {
+      mrb_raise(mrb, E_RUNTIME_ERROR, "integer addition would overflow");
+    }
+  }
+
   redisContext *context = (redisContext *) DATA_PTR(self);
   errno = 0;
   int rc = redisAppendCommandArgv(context, argc, argv, argvlen);
   if (likely(rc == REDIS_OK)) {
-    mrb_sym queue_counter_sym = mrb_intern_lit(mrb, "queue_counter");
-    mrb_value queue_counter_val = mrb_iv_get(mrb, self, queue_counter_sym);
-    mrb_int queue_counter = 1;
-    if (mrb_fixnum_p(queue_counter_val)) {
-      queue_counter = mrb_fixnum(queue_counter_val);
-      if (mrb_int_add_overflow(queue_counter, 1, &queue_counter)) {
-        mrb_raise(mrb, E_RUNTIME_ERROR, "integer addition would overflow");
-      }
-    }
-
     mrb_iv_set(mrb, self, queue_counter_sym, mrb_fixnum_value(queue_counter));
   } else {
     mrb_hiredis_check_error(context, mrb);
@@ -208,12 +208,18 @@ mrb_redisAppendCommandArgv(mrb_state *mrb, mrb_value self)
 static mrb_value
 mrb_redisGetReply(mrb_state *mrb, mrb_value self)
 {
-  redisContext *context = (redisContext *) DATA_PTR(self);
+  mrb_sym queue_counter_sym = mrb_intern_lit(mrb, "queue_counter");
+  mrb_value queue_counter_val = mrb_iv_get(mrb, self, queue_counter_sym);
+  mrb_int queue_counter = -1;
+  if (mrb_fixnum_p(queue_counter_val)) {
+    queue_counter = mrb_fixnum(queue_counter_val);
+  }
 
+  redisContext *context = (redisContext *) DATA_PTR(self);
   redisReply *reply = NULL;
+  mrb_value reply_val = self;
   errno = 0;
   int rc = redisGetReply(context, (void **) &reply);
-  mrb_value reply_val = self;
   if (likely(rc == REDIS_OK && reply != NULL)) {
     struct mrb_jmpbuf* prev_jmp = mrb->jmp;
     struct mrb_jmpbuf c_jmp;
@@ -222,16 +228,10 @@ mrb_redisGetReply(mrb_state *mrb, mrb_value self)
     {
       mrb->jmp = &c_jmp;
       reply_val = mrb_hiredis_get_reply(reply, mrb);
-      mrb_sym queue_counter_sym = mrb_intern_lit(mrb, "queue_counter");
-      mrb_value queue_counter_val = mrb_iv_get(mrb, self, queue_counter_sym);
-      if (mrb_fixnum_p(queue_counter_val)) {
-        mrb_int queue_counter = mrb_fixnum(queue_counter_val);
-        if (queue_counter > 1) {
-          queue_counter--;
-          mrb_iv_set(mrb, self, queue_counter_sym, mrb_fixnum_value(queue_counter));
-        } else {
-          mrb_iv_remove(mrb, self, queue_counter_sym);
-        }
+      if (queue_counter > 1) {
+        mrb_iv_set(mrb, self, queue_counter_sym, mrb_fixnum_value(--queue_counter));
+      } else {
+        mrb_iv_remove(mrb, self, queue_counter_sym);
       }
       mrb->jmp = prev_jmp;
     }
@@ -268,8 +268,7 @@ mrb_redisGetBulkReply(mrb_state *mrb, mrb_value self)
     mrb_value reply = mrb_redisGetReply(mrb, self);
     mrb_ary_push(mrb, bulk_reply, reply);
     mrb_gc_arena_restore(mrb, ai);
-    queue_counter--;
-  } while (queue_counter > 0);
+  } while (--queue_counter > 0);
 
   return bulk_reply;
 }
