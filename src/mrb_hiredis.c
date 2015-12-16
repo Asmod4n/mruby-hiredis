@@ -50,8 +50,8 @@ mrb_hiredis_init(mrb_state *mrb, mrb_value self)
     context = redisConnect(host_or_path, port);
   }
   if (likely(context != NULL)) {
-    mrb_hiredis_check_error(context, mrb);
     mrb_data_init(self, context, &mrb_redisContext_type);
+    mrb_hiredis_check_error(context, mrb);
   } else {
     mrb_sys_fail(mrb, "redisConnect");
   }
