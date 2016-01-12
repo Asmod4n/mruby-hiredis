@@ -444,20 +444,22 @@ mrb_redisConnectCallback(const struct redisAsyncContext *async_context, int stat
 static inline void
 mrb_hiredis_setup_async_context(mrb_state *mrb, mrb_value self, mrb_value callbacks, mrb_value evloop, redisAsyncContext *async_context)
 {
+  mrb_iv_set(mrb, self, mrb_intern_lit(mrb, "@callbacks"), callbacks);
+  mrb_iv_set(mrb, callbacks, mrb_intern_lit(mrb, "@evloop"), evloop);
+  mrb_iv_set(mrb, self, mrb_intern_lit(mrb, "@evloop"), evloop);
+  mrb_iv_set(mrb, self, mrb_intern_lit(mrb, "replies"), replies);
+  mrb_value replies = mrb_ary_new(mrb);
+
   mrb_hiredis_async_context *mrb_async_context = (mrb_hiredis_async_context *) mrb_malloc(mrb, sizeof(mrb_hiredis_async_context));
   mrb_async_context->mrb = mrb;
   mrb_async_context->self = self;
   mrb_async_context->callbacks = callbacks;
-  mrb_iv_set(mrb, self, mrb_intern_lit(mrb, "@callbacks"), callbacks);
-  mrb_iv_set(mrb, callbacks, mrb_intern_lit(mrb, "@evloop"), evloop);
   mrb_async_context->evloop = evloop;
-  mrb_iv_set(mrb, self, mrb_intern_lit(mrb, "@evloop"), evloop);
   mrb_async_context->async_context = async_context;
   mrb_async_context->fd = (&(async_context->c))->fd;
-  mrb_value replies = mrb_ary_new(mrb);
-  mrb_iv_set(mrb, self, mrb_intern_lit(mrb, "replies"), replies);
   mrb_async_context->replies = replies;
   mrb_async_context->subscribe = mrb_nil_value();
+
   async_context->ev.data = mrb_async_context;
   async_context->ev.addRead = mrb_hiredis_addRead;
   async_context->ev.delRead = mrb_hiredis_delRead;
