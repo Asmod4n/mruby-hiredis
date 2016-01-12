@@ -447,8 +447,8 @@ mrb_hiredis_setup_async_context(mrb_state *mrb, mrb_value self, mrb_value callba
   mrb_iv_set(mrb, self, mrb_intern_lit(mrb, "@callbacks"), callbacks);
   mrb_iv_set(mrb, callbacks, mrb_intern_lit(mrb, "@evloop"), evloop);
   mrb_iv_set(mrb, self, mrb_intern_lit(mrb, "@evloop"), evloop);
-  mrb_iv_set(mrb, self, mrb_intern_lit(mrb, "replies"), replies);
   mrb_value replies = mrb_ary_new(mrb);
+  mrb_iv_set(mrb, self, mrb_intern_lit(mrb, "replies"), replies);
 
   mrb_hiredis_async_context *mrb_async_context = (mrb_hiredis_async_context *) mrb_malloc(mrb, sizeof(mrb_hiredis_async_context));
   mrb_async_context->mrb = mrb;
