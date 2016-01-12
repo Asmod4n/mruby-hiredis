@@ -6,6 +6,7 @@ MRuby::Gem::Specification.new('mruby-hiredis') do |spec|
   spec.summary = 'hiredis bindings for mruby'
   spec.version = Hiredis::VERSION
   spec.add_dependency 'mruby-errno'
+  spec.add_dependency 'mruby-redis-ae'
 
   if build.toolchains.include?('android')
     spec.cc.flags << '-DHAVE_PTHREADS'
