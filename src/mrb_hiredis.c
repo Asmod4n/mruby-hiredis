@@ -617,6 +617,7 @@ void mrb_mruby_hiredis_gem_init(mrb_state* mrb)
   mrb_define_method(mrb, hiredis_class, "reconnect",  mrb_redisReconnect,         MRB_ARGS_NONE());
 
   hiredis_async_class = mrb_define_class_under(mrb, hiredis_class, "Async", mrb->object_class);
+  MRB_SET_INSTANCE_TT(hiredis_async_class, MRB_TT_DATA);
   mrb_define_method(mrb, hiredis_async_class, "initialize", mrb_redisAsyncConnect,      MRB_ARGS_ARG(2, 2));
   mrb_define_method(mrb, hiredis_async_class, "read",       mrb_redisAsyncHandleRead,   MRB_ARGS_NONE());
   mrb_define_method(mrb, hiredis_async_class, "write",      mrb_redisAsyncHandleWrite,  MRB_ARGS_NONE());
