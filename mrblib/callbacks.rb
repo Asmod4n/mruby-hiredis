@@ -7,7 +7,9 @@ class Hiredis
         end
 
         @connect = lambda do |async, evloop, status|
-          nil
+          if status == -1
+            evloop.stop
+          end
         end
 
         @addRead = lambda do |async, evloop, fd|

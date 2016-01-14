@@ -30,6 +30,7 @@ mrb_redisAsyncFree(mrb_state *mrb, void *p)
   redisAsyncContext *async_context = (redisAsyncContext *) p;
   if (async_context->ev.data) {
     mrb_free(mrb, async_context->ev.data);
+    async_context->ev.data = NULL;
   }
   redisAsyncFree(async_context);
 }
