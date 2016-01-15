@@ -1,4 +1,6 @@
 MRuby::Build.new do |conf|
+  conf.cc.flags << '-fsanitize=address'
+  conf.linker.flags << '-fsanitize=address'
   toolchain :gcc
   enable_debug
   conf.cc.defines = %w(ENABLE_DEBUG)
