@@ -526,8 +526,6 @@ mrb_redisAsyncConnect(mrb_state *mrb, mrb_value self)
     mrb_sys_fail(mrb, "redisAsyncConnect");
   }
 
-  mrb_funcall(mrb, evloop, "run_once", 0);
-
   return self;
 }
 
