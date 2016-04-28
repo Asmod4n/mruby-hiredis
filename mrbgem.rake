@@ -9,7 +9,7 @@ MRuby::Gem::Specification.new('mruby-hiredis') do |spec|
   spec.add_dependency 'mruby-redis-ae'
 
   if build.toolchains.include?('android')
-    spec.cc.flags << '-DHAVE_PTHREADS'
+    spec.cc.defines << 'HAVE_PTHREADS'
   else
     spec.linker.libraries << 'pthread'
   end

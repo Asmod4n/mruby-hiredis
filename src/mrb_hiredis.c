@@ -93,8 +93,7 @@ mrb_hiredis_get_reply(redisReply *reply, mrb_state *mrb)
       default:
         mrb_raise(mrb, E_HIREDIS_ERROR, "unknown reply type");
     }
-  }
-  else {
+  } else {
     return mrb_nil_value();
   }
 }
@@ -152,11 +151,11 @@ mrb_redisCommandArgv(mrb_state *mrb, mrb_value self)
       mrb->jmp = prev_jmp;
       freeReplyObject(reply);
       MRB_THROW(mrb->jmp);
-    }
     MRB_END_EXC(&c_jmp);
 
     freeReplyObject(reply);
   } else {
+    }
     mrb_hiredis_check_error(context, mrb);
   }
 
@@ -258,8 +257,9 @@ mrb_redisGetBulkReply(mrb_state *mrb, mrb_value self)
 {
   mrb_value queue_counter_val = mrb_iv_get(mrb, self, mrb_intern_lit(mrb, "queue_counter"));
 
-  if (!mrb_fixnum_p(queue_counter_val))
+  if (!mrb_fixnum_p(queue_counter_val)) {
     mrb_raise(mrb, E_RUNTIME_ERROR, "nothing queued yet");
+  }
 
   mrb_int queue_counter = mrb_fixnum(queue_counter_val);
 
@@ -298,6 +298,7 @@ mrb_hiredis_addRead(void *privdata)
   mrb_value block = mrb_iv_get(mrb, mrb_async_context->callbacks, mrb_intern_lit(mrb, "@addRead"));
   if (mrb_nil_p(block)) {
     mrb_raise(mrb, E_ARGUMENT_ERROR, "addRead callback missing");
+    return;
   }
 
   mrb_value argv[3];
@@ -319,6 +320,7 @@ mrb_hiredis_delRead(void *privdata)
   mrb_value block = mrb_iv_get(mrb, mrb_async_context->callbacks, mrb_intern_lit(mrb, "@delRead"));
   if (mrb_nil_p(block)) {
     mrb_raise(mrb, E_ARGUMENT_ERROR, "delRead callback missing");
+    return;
   }
 
   mrb_value argv[3];
@@ -340,6 +342,7 @@ mrb_hiredis_addWrite(void *privdata)
   mrb_value block = mrb_iv_get(mrb, mrb_async_context->callbacks, mrb_intern_lit(mrb, "@addWrite"));
   if (mrb_nil_p(block)) {
     mrb_raise(mrb, E_ARGUMENT_ERROR, "addWrite callback missing");
+    return;
   }
 
   mrb_value argv[3];
@@ -361,6 +364,7 @@ mrb_hiredis_delWrite(void *privdata)
   mrb_value block = mrb_iv_get(mrb, mrb_async_context->callbacks, mrb_intern_lit(mrb, "@delWrite"));
   if (mrb_nil_p(block)) {
     mrb_raise(mrb, E_ARGUMENT_ERROR, "delWrite callback missing");
+    return;
   }
 
   mrb_value argv[3];
@@ -388,6 +392,7 @@ mrb_hiredis_cleanup(void *privdata)
   mrb_value block = mrb_iv_get(mrb, mrb_async_context->callbacks, mrb_intern_lit(mrb, "@cleanup"));
   if (mrb_nil_p(block)) {
     mrb_raise(mrb, E_ARGUMENT_ERROR, "cleanup callback missing");
+    return;
   }
 
   mrb_value argv[3];
@@ -419,6 +424,7 @@ mrb_redisDisconnectCallback(const struct redisAsyncContext *async_context, int s
   mrb_value block = mrb_iv_get(mrb, mrb_async_context->callbacks, mrb_intern_lit(mrb, "@disconnect"));
   if (mrb_nil_p(block)) {
     mrb_raise(mrb, E_ARGUMENT_ERROR, "disconnect callback missing");
+    return;
   }
 
   mrb_value argv[3];
@@ -449,6 +455,7 @@ mrb_redisConnectCallback(const struct redisAsyncContext *async_context, int stat
   mrb_value block = mrb_iv_get(mrb, mrb_async_context->callbacks, mrb_intern_lit(mrb, "@connect"));
   if (mrb_nil_p(block)) {
     mrb_raise(mrb, E_ARGUMENT_ERROR, "connect callback missing");
+    return;
   }
 
   mrb_value argv[3];
@@ -556,8 +563,9 @@ mrb_redisCallbackFn(struct redisAsyncContext *async_context, void *r, void *priv
   if (!mrb)
     return;
 
+  int arena_index = mrb_gc_arena_save(mrb);
   mrb_value reply = mrb_hiredis_get_reply((redisReply *) r, mrb);
-  mrb_value block;
+  mrb_value block = mrb_nil_value();
   if (((&(async_context->c))->flags & REDIS_SUBSCRIBED)||((&(async_context->c))->flags & REDIS_MONITORING)) {
     block = mrb_async_context->subscribe;
   }
@@ -567,6 +575,7 @@ mrb_redisCallbackFn(struct redisAsyncContext *async_context, void *r, void *priv
   if (!mrb_nil_p(block)) {
     mrb_yield(mrb, block, reply);
   }
+  mrb_gc_arena_restore(mrb, arena_index);
 }
 
 static mrb_value
