@@ -65,7 +65,7 @@ mrb_hiredis_get_ary_reply(redisReply *reply, mrb_state *mrb);
 static inline mrb_value
 mrb_hiredis_get_reply(redisReply *reply, mrb_state *mrb)
 {
-  if (reply) {
+  if (likely(reply)) {
     switch (reply->type) {
       case REDIS_REPLY_STRING:
         return mrb_str_new(mrb, reply->str, reply->len);
@@ -151,11 +151,11 @@ mrb_redisCommandArgv(mrb_state *mrb, mrb_value self)
       mrb->jmp = prev_jmp;
       freeReplyObject(reply);
       MRB_THROW(mrb->jmp);
+    }
     MRB_END_EXC(&c_jmp);
 
     freeReplyObject(reply);
   } else {
-    }
     mrb_hiredis_check_error(context, mrb);
   }
 
