@@ -9,11 +9,11 @@
 # define unlikely(x) (x)
 #endif
 
-static inline void
+MRB_INLINE void
 mrb_hiredis_check_error(const redisContext *context, mrb_state *mrb)
 {
   if (context->err != 0) {
-    if (errno != 0) {
+    if (errno) {
       mrb_sys_fail(mrb, context->errstr);
     } else {
       switch (context->err) {
@@ -59,10 +59,10 @@ mrb_redisConnect(mrb_state *mrb, mrb_value self)
   return self;
 }
 
-static inline mrb_value
+MRB_INLINE mrb_value
 mrb_hiredis_get_ary_reply(redisReply *reply, mrb_state *mrb);
 
-static inline mrb_value
+MRB_INLINE mrb_value
 mrb_hiredis_get_reply(redisReply *reply, mrb_state *mrb)
 {
   if (likely(reply)) {
@@ -98,7 +98,7 @@ mrb_hiredis_get_reply(redisReply *reply, mrb_state *mrb)
   }
 }
 
-static inline mrb_value
+MRB_INLINE mrb_value
 mrb_hiredis_get_ary_reply(redisReply *reply, mrb_state *mrb)
 {
   mrb_value ary = mrb_ary_new_capa(mrb, reply->elements);
@@ -126,6 +126,7 @@ mrb_redisCommandArgv(mrb_state *mrb, mrb_value self)
   mrb_int command_len;
   argv[0] = mrb_sym2name_len(mrb, command, &command_len);
   argvlen[0] = command_len;
+  mrb_value reply_val = self;
 
   for (mrb_int argc_current = 1; argc_current < argc; argc_current++) {
     mrb_value curr = mrb_str_to_str(mrb, mrb_argv[argc_current - 1]);
@@ -143,7 +144,7 @@ mrb_redisCommandArgv(mrb_state *mrb, mrb_value self)
     MRB_TRY(&c_jmp)
     {
       mrb->jmp = &c_jmp;
-      self = mrb_hiredis_get_reply(reply, mrb);
+      reply_val = mrb_hiredis_get_reply(reply, mrb);
       mrb->jmp = prev_jmp;
     }
     MRB_CATCH(&c_jmp)
@@ -159,7 +160,7 @@ mrb_redisCommandArgv(mrb_state *mrb, mrb_value self)
     mrb_hiredis_check_error(context, mrb);
   }
 
-  return self;
+  return reply_val;
 }
 
 static mrb_value
@@ -189,7 +190,7 @@ mrb_redisAppendCommandArgv(mrb_state *mrb, mrb_value self)
   mrb_int queue_counter = 1;
   if (mrb_fixnum_p(queue_counter_val)) {
     queue_counter = mrb_fixnum(queue_counter_val);
-    if (mrb_int_add_overflow(queue_counter, 1, &queue_counter)) {
+    if (unlikely(mrb_int_add_overflow(queue_counter, 1, &queue_counter))) {
       mrb_raise(mrb, E_RUNTIME_ERROR, "integer addition would overflow");
     }
   }
@@ -257,7 +258,7 @@ mrb_redisGetBulkReply(mrb_state *mrb, mrb_value self)
 {
   mrb_value queue_counter_val = mrb_iv_get(mrb, self, mrb_intern_lit(mrb, "queue_counter"));
 
-  if (!mrb_fixnum_p(queue_counter_val)) {
+  if (unlikely(!mrb_fixnum_p(queue_counter_val))) {
     mrb_raise(mrb, E_RUNTIME_ERROR, "nothing queued yet");
   }
 
@@ -288,7 +289,7 @@ mrb_redisReconnect(mrb_state *mrb, mrb_value self)
   return self;
 }
 
-static inline void
+MRB_INLINE void
 mrb_hiredis_addRead(void *privdata)
 {
   mrb_hiredis_async_context *mrb_async_context = (mrb_hiredis_async_context *) privdata;
@@ -296,7 +297,7 @@ mrb_hiredis_addRead(void *privdata)
   int arena_index = mrb_gc_arena_save(mrb);
 
   mrb_value block = mrb_iv_get(mrb, mrb_async_context->callbacks, mrb_intern_lit(mrb, "@addRead"));
-  if (mrb_nil_p(block)) {
+  if (unlikely(mrb_nil_p(block))) {
     mrb_raise(mrb, E_ARGUMENT_ERROR, "addRead callback missing");
     return;
   }
@@ -310,7 +311,7 @@ mrb_hiredis_addRead(void *privdata)
   mrb_gc_arena_restore(mrb, arena_index);
 }
 
-static inline void
+MRB_INLINE void
 mrb_hiredis_delRead(void *privdata)
 {
   mrb_hiredis_async_context *mrb_async_context = (mrb_hiredis_async_context *) privdata;
@@ -318,7 +319,7 @@ mrb_hiredis_delRead(void *privdata)
   int arena_index = mrb_gc_arena_save(mrb);
 
   mrb_value block = mrb_iv_get(mrb, mrb_async_context->callbacks, mrb_intern_lit(mrb, "@delRead"));
-  if (mrb_nil_p(block)) {
+  if (unlikely(mrb_nil_p(block))) {
     mrb_raise(mrb, E_ARGUMENT_ERROR, "delRead callback missing");
     return;
   }
@@ -332,7 +333,7 @@ mrb_hiredis_delRead(void *privdata)
   mrb_gc_arena_restore(mrb, arena_index);
 }
 
-static inline void
+MRB_INLINE void
 mrb_hiredis_addWrite(void *privdata)
 {
   mrb_hiredis_async_context *mrb_async_context = (mrb_hiredis_async_context *) privdata;
@@ -340,7 +341,7 @@ mrb_hiredis_addWrite(void *privdata)
   int arena_index = mrb_gc_arena_save(mrb);
 
   mrb_value block = mrb_iv_get(mrb, mrb_async_context->callbacks, mrb_intern_lit(mrb, "@addWrite"));
-  if (mrb_nil_p(block)) {
+  if (unlikely(mrb_nil_p(block))) {
     mrb_raise(mrb, E_ARGUMENT_ERROR, "addWrite callback missing");
     return;
   }
@@ -354,7 +355,7 @@ mrb_hiredis_addWrite(void *privdata)
   mrb_gc_arena_restore(mrb, arena_index);
 }
 
-static inline void
+MRB_INLINE void
 mrb_hiredis_delWrite(void *privdata)
 {
   mrb_hiredis_async_context *mrb_async_context = (mrb_hiredis_async_context *) privdata;
@@ -362,7 +363,7 @@ mrb_hiredis_delWrite(void *privdata)
   int arena_index = mrb_gc_arena_save(mrb);
 
   mrb_value block = mrb_iv_get(mrb, mrb_async_context->callbacks, mrb_intern_lit(mrb, "@delWrite"));
-  if (mrb_nil_p(block)) {
+  if (unlikely(mrb_nil_p(block))) {
     mrb_raise(mrb, E_ARGUMENT_ERROR, "delWrite callback missing");
     return;
   }
@@ -376,7 +377,7 @@ mrb_hiredis_delWrite(void *privdata)
   mrb_gc_arena_restore(mrb, arena_index);
 }
 
-static inline void
+MRB_INLINE void
 mrb_hiredis_cleanup(void *privdata)
 {
   if (!privdata)
@@ -390,7 +391,7 @@ mrb_hiredis_cleanup(void *privdata)
   int arena_index = mrb_gc_arena_save(mrb);
 
   mrb_value block = mrb_iv_get(mrb, mrb_async_context->callbacks, mrb_intern_lit(mrb, "@cleanup"));
-  if (mrb_nil_p(block)) {
+  if (unlikely(mrb_nil_p(block))) {
     mrb_raise(mrb, E_ARGUMENT_ERROR, "cleanup callback missing");
     return;
   }
@@ -408,21 +409,21 @@ mrb_hiredis_cleanup(void *privdata)
   mrb_async_context->async_context->ev.data = NULL;
 }
 
-static inline void
+MRB_INLINE void
 mrb_redisDisconnectCallback(const struct redisAsyncContext *async_context, int status)
 {
-  if (!async_context->ev.data)
+  if (unlikely(!async_context->ev.data))
     return;
 
   mrb_hiredis_async_context *mrb_async_context = (mrb_hiredis_async_context *) async_context->ev.data;
   mrb_state *mrb = mrb_async_context->mrb;
-  if (!mrb)
+  if (unlikely(!mrb))
     return;
 
   int arena_index = mrb_gc_arena_save(mrb);
 
   mrb_value block = mrb_iv_get(mrb, mrb_async_context->callbacks, mrb_intern_lit(mrb, "@disconnect"));
-  if (mrb_nil_p(block)) {
+  if (unlikely(mrb_nil_p(block))) {
     mrb_raise(mrb, E_ARGUMENT_ERROR, "disconnect callback missing");
     return;
   }
@@ -434,26 +435,26 @@ mrb_redisDisconnectCallback(const struct redisAsyncContext *async_context, int s
 
   mrb_yield_argv(mrb, block, 3, argv);
   mrb_gc_arena_restore(mrb, arena_index);
-  if (status == REDIS_ERR) {
+  if (unlikely(status == REDIS_ERR)) {
     mrb_hiredis_check_error(&async_context->c, mrb);
   }
 }
 
-static inline void
+MRB_INLINE void
 mrb_redisConnectCallback(const struct redisAsyncContext *async_context, int status)
 {
-  if (!async_context->ev.data)
+  if (unlikely(!async_context->ev.data))
     return;
 
   mrb_hiredis_async_context *mrb_async_context = (mrb_hiredis_async_context *) async_context->ev.data;
   mrb_state *mrb = mrb_async_context->mrb;
-  if (!mrb)
+  if (unlikely(!mrb))
     return;
 
   int arena_index = mrb_gc_arena_save(mrb);
 
   mrb_value block = mrb_iv_get(mrb, mrb_async_context->callbacks, mrb_intern_lit(mrb, "@connect"));
-  if (mrb_nil_p(block)) {
+  if (unlikely(mrb_nil_p(block))) {
     mrb_raise(mrb, E_ARGUMENT_ERROR, "connect callback missing");
     return;
   }
@@ -466,12 +467,12 @@ mrb_redisConnectCallback(const struct redisAsyncContext *async_context, int stat
   mrb_yield_argv(mrb, block, 3, argv);
   mrb_gc_arena_restore(mrb, arena_index);
 
-  if (status == REDIS_ERR) {
+  if (unlikely(status == REDIS_ERR)) {
     mrb_hiredis_check_error(&async_context->c, mrb_async_context->mrb);
   }
 }
 
-static inline void
+MRB_INLINE void
 mrb_hiredis_setup_async_context(mrb_state *mrb, mrb_value self, mrb_value callbacks, mrb_value evloop, redisAsyncContext *async_context)
 {
   mrb_iv_set(mrb, self, mrb_intern_lit(mrb, "@callbacks"), callbacks);
@@ -552,15 +553,15 @@ mrb_redisAsyncHandleWrite(mrb_state *mrb, mrb_value self)
   return self;
 }
 
-static inline void
+MRB_INLINE void
 mrb_redisCallbackFn(struct redisAsyncContext *async_context, void *r, void *privdata)
 {
-  if (!async_context->ev.data)
+  if (unlikely(!async_context->ev.data))
     return;
 
   mrb_hiredis_async_context *mrb_async_context = (mrb_hiredis_async_context *) async_context->ev.data;
   mrb_state *mrb = mrb_async_context->mrb;
-  if (!mrb)
+  if (unlikely(!mrb))
     return;
 
   int arena_index = mrb_gc_arena_save(mrb);
@@ -568,11 +569,10 @@ mrb_redisCallbackFn(struct redisAsyncContext *async_context, void *r, void *priv
   mrb_value block = mrb_nil_value();
   if (((&(async_context->c))->flags & REDIS_SUBSCRIBED)||((&(async_context->c))->flags & REDIS_MONITORING)) {
     block = mrb_async_context->subscribe;
-  }
-  else {
+  } else {
     block = mrb_ary_shift(mrb, mrb_async_context->replies);
   }
-  if (!mrb_nil_p(block)) {
+  if (likely(!mrb_nil_p(block))) {
     mrb_yield(mrb, block, reply);
   }
   mrb_gc_arena_restore(mrb, arena_index);
@@ -606,15 +606,17 @@ mrb_redisAsyncCommandArgv(mrb_state *mrb, mrb_value self)
   int rc;
   if (mrb_nil_p(block)) {
     rc = redisAsyncCommandArgv(async_context, NULL, NULL, argc, argv, argvlen);
-  }
-  else {
+  } else {
     rc = redisAsyncCommandArgv(async_context, mrb_redisCallbackFn, NULL, argc, argv, argvlen);
-    if (rc == REDIS_OK) {
-      if (command == mrb_intern_lit(mrb, "subscribe")||command == mrb_intern_lit(mrb, "psubscribe")||command == mrb_intern_lit(mrb, "monitor")) {
+    if (likely(rc == REDIS_OK)) {
+      if ((command_len == 9 && strncasecmp(argv[0], "subscribe", command_len) == 0)||
+        (command_len == 10 && strncasecmp(argv[0], "psubscribe", command_len) == 0)||
+        (command_len == 7 && strncasecmp(argv[0], "monitor", command_len) == 0)) {
         ((mrb_hiredis_async_context *) async_context->ev.data)->subscribe = block;
         mrb_iv_set(mrb, self, mrb_intern_lit(mrb, "subscribe"), block);
       }
-      else if (command == mrb_intern_lit(mrb, "unsubscribe")||command == mrb_intern_lit(mrb, "punsubscribe")) {
+      else if ((command_len == 11 && strncasecmp(argv[0], "unsubscribe", command_len) == 0)||
+        (command_len == 12 && strncasecmp(argv[0], "punsubscribe", command_len) == 0)) {
         ((mrb_hiredis_async_context *) async_context->ev.data)->subscribe = mrb_nil_value();
         mrb_iv_remove(mrb, self, mrb_intern_lit(mrb, "subscribe"));
       }
@@ -623,7 +625,7 @@ mrb_redisAsyncCommandArgv(mrb_state *mrb, mrb_value self)
       }
     }
   }
-  if (rc == REDIS_ERR) {
+  if (unlikely(rc == REDIS_ERR)) {
     mrb_hiredis_check_error(&async_context->c, mrb);
   }
 
@@ -638,7 +640,8 @@ mrb_redisAsyncDisconnect(mrb_state *mrb, mrb_value self)
   return mrb_nil_value();
 }
 
-void mrb_mruby_hiredis_gem_init(mrb_state* mrb)
+void
+mrb_mruby_hiredis_gem_init(mrb_state* mrb)
 {
   struct RClass *hiredis_class, *hiredis_error_class, *hiredis_async_class;
   hiredis_class = mrb_define_class(mrb, "Hiredis", mrb->object_class);

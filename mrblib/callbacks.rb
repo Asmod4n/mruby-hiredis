@@ -13,10 +13,8 @@ class Hiredis
         end
 
         @addRead = lambda do |async, evloop, fd|
-          unless @read_cb
-            @read_cb = evloop.create_file_event(fd, RedisAe::READABLE) do |fd, mask|
-              async.read
-            end
+          @read_cb = evloop.create_file_event(fd, RedisAe::READABLE) do |fd, mask|
+            async.read
           end
         end
 
@@ -28,10 +26,8 @@ class Hiredis
         end
 
         @addWrite = lambda do |async, evloop, fd|
-          unless @write_cb
-            @write_cb = evloop.create_file_event(fd, RedisAe::WRITABLE) do |fd, mask|
-              async.write
-            end
+          @write_cb = evloop.create_file_event(fd, RedisAe::WRITABLE) do |fd, mask|
+            async.write
           end
         end
 

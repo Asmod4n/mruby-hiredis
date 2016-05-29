@@ -13,6 +13,7 @@
 #include <string.h>
 #include <mruby/class.h>
 #include <mruby/variable.h>
+#include <strings.h>
 
 static void
 mrb_redisFree(mrb_state *mrb, void *p)
