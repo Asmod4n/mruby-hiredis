@@ -289,12 +289,16 @@ mrb_redisReconnect(mrb_state *mrb, mrb_value self)
 MRB_INLINE void
 mrb_hiredis_addRead(void *privdata)
 {
+  mrb_assert(privdata);
+
   mrb_hiredis_async_context *mrb_async_context = (mrb_hiredis_async_context *) privdata;
   mrb_state *mrb = mrb_async_context->mrb;
+  mrb_assert(mrb);
+
   int arena_index = mrb_gc_arena_save(mrb);
 
   mrb_value block = mrb_iv_get(mrb, mrb_async_context->callbacks, mrb_intern_lit(mrb, "@addRead"));
-  if (unlikely(mrb_nil_p(block))) {
+  if (unlikely(mrb_type(block) != MRB_TT_PROC)) {
     mrb_raise(mrb, E_ARGUMENT_ERROR, "addRead callback missing");
     return;
   }
@@ -311,12 +315,16 @@ mrb_hiredis_addRead(void *privdata)
 MRB_INLINE void
 mrb_hiredis_delRead(void *privdata)
 {
+  mrb_assert(privdata);
+
   mrb_hiredis_async_context *mrb_async_context = (mrb_hiredis_async_context *) privdata;
   mrb_state *mrb = mrb_async_context->mrb;
+  mrb_assert(mrb);
+
   int arena_index = mrb_gc_arena_save(mrb);
 
   mrb_value block = mrb_iv_get(mrb, mrb_async_context->callbacks, mrb_intern_lit(mrb, "@delRead"));
-  if (unlikely(mrb_nil_p(block))) {
+  if (unlikely(mrb_type(block) != MRB_TT_PROC)) {
     mrb_raise(mrb, E_ARGUMENT_ERROR, "delRead callback missing");
     return;
   }
@@ -333,12 +341,16 @@ mrb_hiredis_delRead(void *privdata)
 MRB_INLINE void
 mrb_hiredis_addWrite(void *privdata)
 {
+  mrb_assert(privdata);
+
   mrb_hiredis_async_context *mrb_async_context = (mrb_hiredis_async_context *) privdata;
   mrb_state *mrb = mrb_async_context->mrb;
+  mrb_assert(mrb);
+
   int arena_index = mrb_gc_arena_save(mrb);
 
   mrb_value block = mrb_iv_get(mrb, mrb_async_context->callbacks, mrb_intern_lit(mrb, "@addWrite"));
-  if (unlikely(mrb_nil_p(block))) {
+  if (unlikely(mrb_type(block) != MRB_TT_PROC)) {
     mrb_raise(mrb, E_ARGUMENT_ERROR, "addWrite callback missing");
     return;
   }
@@ -355,12 +367,16 @@ mrb_hiredis_addWrite(void *privdata)
 MRB_INLINE void
 mrb_hiredis_delWrite(void *privdata)
 {
+  mrb_assert(privdata);
+
   mrb_hiredis_async_context *mrb_async_context = (mrb_hiredis_async_context *) privdata;
   mrb_state *mrb = mrb_async_context->mrb;
+  mrb_assert(mrb);
+
   int arena_index = mrb_gc_arena_save(mrb);
 
   mrb_value block = mrb_iv_get(mrb, mrb_async_context->callbacks, mrb_intern_lit(mrb, "@delWrite"));
-  if (unlikely(mrb_nil_p(block))) {
+  if (unlikely(mrb_type(block) != MRB_TT_PROC)) {
     mrb_raise(mrb, E_ARGUMENT_ERROR, "delWrite callback missing");
     return;
   }
@@ -377,18 +393,16 @@ mrb_hiredis_delWrite(void *privdata)
 MRB_INLINE void
 mrb_hiredis_cleanup(void *privdata)
 {
-  if (!privdata)
-    return;
+  mrb_assert(privdata);
 
   mrb_hiredis_async_context *mrb_async_context = (mrb_hiredis_async_context *) privdata;
   mrb_state *mrb = mrb_async_context->mrb;
-  if (!mrb)
-    return;
+  mrb_assert(mrb);
 
   int arena_index = mrb_gc_arena_save(mrb);
 
   mrb_value block = mrb_iv_get(mrb, mrb_async_context->callbacks, mrb_intern_lit(mrb, "@cleanup"));
-  if (unlikely(mrb_nil_p(block))) {
+  if (unlikely(mrb_type(block) != MRB_TT_PROC)) {
     mrb_raise(mrb, E_ARGUMENT_ERROR, "cleanup callback missing");
     return;
   }
@@ -409,18 +423,16 @@ mrb_hiredis_cleanup(void *privdata)
 MRB_INLINE void
 mrb_redisDisconnectCallback(const struct redisAsyncContext *async_context, int status)
 {
-  if (unlikely(!async_context->ev.data))
-    return;
+  mrb_assert(async_context->ev.data);
 
   mrb_hiredis_async_context *mrb_async_context = (mrb_hiredis_async_context *) async_context->ev.data;
   mrb_state *mrb = mrb_async_context->mrb;
-  if (unlikely(!mrb))
-    return;
+  mrb_assert(mrb);
 
   int arena_index = mrb_gc_arena_save(mrb);
 
   mrb_value block = mrb_iv_get(mrb, mrb_async_context->callbacks, mrb_intern_lit(mrb, "@disconnect"));
-  if (unlikely(mrb_nil_p(block))) {
+  if (unlikely(mrb_type(block) != MRB_TT_PROC)) {
     mrb_raise(mrb, E_ARGUMENT_ERROR, "disconnect callback missing");
     return;
   }
@@ -440,18 +452,16 @@ mrb_redisDisconnectCallback(const struct redisAsyncContext *async_context, int s
 MRB_INLINE void
 mrb_redisConnectCallback(const struct redisAsyncContext *async_context, int status)
 {
-  if (unlikely(!async_context->ev.data))
-    return;
+  mrb_assert(async_context->ev.data);
 
   mrb_hiredis_async_context *mrb_async_context = (mrb_hiredis_async_context *) async_context->ev.data;
   mrb_state *mrb = mrb_async_context->mrb;
-  if (unlikely(!mrb))
-    return;
+  mrb_assert(mrb);
 
   int arena_index = mrb_gc_arena_save(mrb);
 
   mrb_value block = mrb_iv_get(mrb, mrb_async_context->callbacks, mrb_intern_lit(mrb, "@connect"));
-  if (unlikely(mrb_nil_p(block))) {
+  if (unlikely(mrb_type(block) != MRB_TT_PROC)) {
     mrb_raise(mrb, E_ARGUMENT_ERROR, "connect callback missing");
     return;
   }
@@ -553,13 +563,11 @@ mrb_redisAsyncHandleWrite(mrb_state *mrb, mrb_value self)
 MRB_INLINE void
 mrb_redisCallbackFn(struct redisAsyncContext *async_context, void *r, void *privdata)
 {
-  if (unlikely(!async_context->ev.data))
-    return;
+  mrb_assert(async_context->ev.data);
 
   mrb_hiredis_async_context *mrb_async_context = (mrb_hiredis_async_context *) async_context->ev.data;
   mrb_state *mrb = mrb_async_context->mrb;
-  if (unlikely(!mrb))
-    return;
+  mrb_assert(mrb);
 
   int arena_index = mrb_gc_arena_save(mrb);
   mrb_value reply = mrb_hiredis_get_reply((redisReply *) r, mrb);
@@ -569,7 +577,7 @@ mrb_redisCallbackFn(struct redisAsyncContext *async_context, void *r, void *priv
   } else {
     block = mrb_ary_shift(mrb, mrb_async_context->replies);
   }
-  if (likely(!mrb_nil_p(block))) {
+  if (likely(mrb_type(block) == MRB_TT_PROC)) {
     mrb_yield(mrb, block, reply);
   }
   mrb_gc_arena_restore(mrb, arena_index);

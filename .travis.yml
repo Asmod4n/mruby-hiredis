@@ -11,8 +11,8 @@ compiler:
   - clang
 services:
   - redis-server
-script:		
-  - rake test
+script:
+  - make test
 os:
   - linux
   - osx
