@@ -12,7 +12,7 @@ compiler:
 services:
   - redis-server
 script:
-  - make test
+  - rake test
 os:
   - linux
   - osx
