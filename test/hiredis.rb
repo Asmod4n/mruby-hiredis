@@ -14,12 +14,12 @@ assert("Pipelined commands") do
   hiredis = Hiredis.new
   hiredis.queue(:set, "mruby-hiredis-test:foo", "bar")
   hiredis.queue(:get, "mruby-hiredis-test:foo")
-  assert_equal(:OK,   hiredis.reply)
+  assert_equal("OK",   hiredis.reply)
   assert_equal("bar", hiredis.reply)
 
   hiredis.queue(:set, "mruby-hiredis-test:foo", "bar")
   hiredis.queue(:get, "mruby-hiredis-test:foo")
-  assert_equal([:OK, "bar"], hiredis.bulk_reply)
+  assert_equal(["OK", "bar"], hiredis.bulk_reply)
 
   hiredis.queue(:nonexistant)
   assert_kind_of(Hiredis::ReplyError, hiredis.reply)
@@ -29,7 +29,7 @@ end
 assert("Hiredis#transaction") do
   hiredis = Hiredis.new
   ret = hiredis.transaction([:set, "mruby-hiredis-test:foo", "bar"], [:get, "mruby-hiredis-test:foo"])
-  assert_equal([:OK, :QUEUED, :QUEUED, [:OK, "bar"]], ret)
+  assert_equal(["OK", "QUEUED", "QUEUED", ["OK", "bar"]], ret)
   hiredis.del("mruby-hiredis-test:foo")
 end
 

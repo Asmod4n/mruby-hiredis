@@ -53,6 +53,11 @@ loop do
 end
 ```
 
+Disque
+------
+
+https://github.com/antirez/disque made it mandatory to change the way mruby-hiredis handles status replies, they have been symbols in the past, but are Strings now. This brakes pipelining and transactions for existing applications. Because of that the major version got incremented.
+
 Reply Error Handling
 --------------
 

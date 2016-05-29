@@ -20,7 +20,7 @@ class Hiredis
       end
       self
     end
-  end
+  end #class << self
 
   def transaction(*commands)
     queue(:multi)
