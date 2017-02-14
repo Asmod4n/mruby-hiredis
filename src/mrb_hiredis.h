@@ -13,6 +13,7 @@
 #include <string.h>
 #include <mruby/class.h>
 #include <mruby/variable.h>
+#include <mruby/hash.h>
 #include <strings.h>
 
 static void
@@ -48,7 +49,7 @@ typedef struct {
   redisAsyncContext *async_context;
   int fd;
   mrb_value replies;
-  mrb_value subscribe;
+  mrb_value subscriptions;
 } mrb_hiredis_async_context;
 
 #endif

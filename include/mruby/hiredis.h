@@ -3,9 +3,7 @@
 
 #include <mruby.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+MRB_BEGIN_DECL
 
 #define E_HIREDIS_ERROR (mrb_class_get_under(mrb, mrb_class_get(mrb, "Hiredis"), "Error"))
 #define E_HIREDIS_REPLY_ERROR (mrb_class_get_under(mrb, mrb_class_get(mrb, "Hiredis"), "ReplyError"))
@@ -15,9 +13,7 @@ extern "C" {
 #define E_HIREDIS_ERR_PROTOCOL (mrb_class_get_under(mrb, mrb_class_get(mrb, "Hiredis"), "ProtocolError"))
 #define E_HIREDIS_ERR_OOM (mrb_class_get_under(mrb, mrb_class_get(mrb, "Hiredis"), "OOMError"))
 
-#ifdef __cplusplus
-}
-#endif
+MRB_END_DECL
 
 #endif
 
