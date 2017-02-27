@@ -48,6 +48,14 @@ assert("Hiredis#incr") do
   hiredis.del("mruby-hiredis-test:foo")
 end
 
+assert("Hiredis::Async") do
+  async = Hiredis::Async.new
+  async.queue(:del, "mruby-hiredis-test:foo")
+  async.evloop.run_once
+  async.queue(:incr, "mruby-hiredis-test:foo") {|reply| assert_equal(1, reply)}
+  async.evloop.run_once
+end
+
 assert("Defines IOError when missing") do
   assert_equal(StandardError, IOError.superclass)
 end
