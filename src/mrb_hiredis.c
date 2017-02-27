@@ -101,8 +101,7 @@ mrb_hiredis_get_ary_reply(redisReply *reply, mrb_state *mrb)
   mrb_value ary = mrb_ary_new_capa(mrb, reply->elements);
   int ai = mrb_gc_arena_save(mrb);
   for (size_t element_couter = 0; element_couter < reply->elements; element_couter++) {
-    mrb_value element = mrb_hiredis_get_reply(reply->element[element_couter], mrb);
-    mrb_ary_push(mrb, ary, element);
+    mrb_ary_push(mrb, ary, mrb_hiredis_get_reply(reply->element[element_couter], mrb));
     mrb_gc_arena_restore(mrb, ai);
   }
   return ary;
@@ -293,7 +292,6 @@ mrb_hiredis_addRead(void *privdata)
   mrb_state *mrb = mrb_async_context->mrb;
   mrb_assert(mrb);
 
-  int arena_index = mrb_gc_arena_save(mrb);
 
   mrb_value block = mrb_iv_get(mrb, mrb_async_context->callbacks, mrb_intern_lit(mrb, "@addRead"));
   if (unlikely(mrb_type(block) != MRB_TT_PROC)) {
@@ -307,7 +305,6 @@ mrb_hiredis_addRead(void *privdata)
   argv[2] = mrb_fixnum_value(mrb_async_context->fd);
 
   mrb_yield_argv(mrb, block, 3, argv);
-  mrb_gc_arena_restore(mrb, arena_index);
 }
 
 MRB_INLINE void
@@ -318,8 +315,6 @@ mrb_hiredis_delRead(void *privdata)
   mrb_hiredis_async_context *mrb_async_context = (mrb_hiredis_async_context *) privdata;
   mrb_state *mrb = mrb_async_context->mrb;
   mrb_assert(mrb);
-
-  int arena_index = mrb_gc_arena_save(mrb);
 
   mrb_value block = mrb_iv_get(mrb, mrb_async_context->callbacks, mrb_intern_lit(mrb, "@delRead"));
   if (unlikely(mrb_type(block) != MRB_TT_PROC)) {
@@ -333,7 +328,6 @@ mrb_hiredis_delRead(void *privdata)
   argv[2] = mrb_fixnum_value(mrb_async_context->fd);
 
   mrb_yield_argv(mrb, block, 3, argv);
-  mrb_gc_arena_restore(mrb, arena_index);
 }
 
 MRB_INLINE void
@@ -344,8 +338,6 @@ mrb_hiredis_addWrite(void *privdata)
   mrb_hiredis_async_context *mrb_async_context = (mrb_hiredis_async_context *) privdata;
   mrb_state *mrb = mrb_async_context->mrb;
   mrb_assert(mrb);
-
-  int arena_index = mrb_gc_arena_save(mrb);
 
   mrb_value block = mrb_iv_get(mrb, mrb_async_context->callbacks, mrb_intern_lit(mrb, "@addWrite"));
   if (unlikely(mrb_type(block) != MRB_TT_PROC)) {
@@ -359,7 +351,6 @@ mrb_hiredis_addWrite(void *privdata)
   argv[2] = mrb_fixnum_value(mrb_async_context->fd);
 
   mrb_yield_argv(mrb, block, 3, argv);
-  mrb_gc_arena_restore(mrb, arena_index);
 }
 
 MRB_INLINE void
@@ -370,8 +361,6 @@ mrb_hiredis_delWrite(void *privdata)
   mrb_hiredis_async_context *mrb_async_context = (mrb_hiredis_async_context *) privdata;
   mrb_state *mrb = mrb_async_context->mrb;
   mrb_assert(mrb);
-
-  int arena_index = mrb_gc_arena_save(mrb);
 
   mrb_value block = mrb_iv_get(mrb, mrb_async_context->callbacks, mrb_intern_lit(mrb, "@delWrite"));
   if (unlikely(mrb_type(block) != MRB_TT_PROC)) {
@@ -385,7 +374,6 @@ mrb_hiredis_delWrite(void *privdata)
   argv[2] = mrb_fixnum_value(mrb_async_context->fd);
 
   mrb_yield_argv(mrb, block, 3, argv);
-  mrb_gc_arena_restore(mrb, arena_index);
 }
 
 MRB_INLINE void
@@ -397,8 +385,6 @@ mrb_hiredis_cleanup(void *privdata)
   mrb_hiredis_async_context *mrb_async_context = (mrb_hiredis_async_context *) privdata;
   mrb_state *mrb = mrb_async_context->mrb;
   mrb_assert(mrb);
-
-  int arena_index = mrb_gc_arena_save(mrb);
 
   mrb_value block = mrb_iv_get(mrb, mrb_async_context->callbacks, mrb_intern_lit(mrb, "@cleanup"));
   if (unlikely(mrb_type(block) != MRB_TT_PROC)) {
@@ -412,7 +398,6 @@ mrb_hiredis_cleanup(void *privdata)
   argv[2] = mrb_fixnum_value(mrb_async_context->fd);
 
   mrb_yield_argv(mrb, block, 3, argv);
-  mrb_gc_arena_restore(mrb, arena_index);
 
   mrb_data_init(mrb_async_context->self, NULL, NULL);
   mrb_free(mrb, privdata);
@@ -422,14 +407,13 @@ mrb_hiredis_cleanup(void *privdata)
 MRB_INLINE void
 mrb_redisDisconnectCallback(const struct redisAsyncContext *async_context, int status)
 {
-  if (!async_context->ev.data)
+  if (async_context->c.flags & REDIS_FREEING)
     return;
 
   mrb_hiredis_async_context *mrb_async_context = (mrb_hiredis_async_context *) async_context->ev.data;
   mrb_state *mrb = mrb_async_context->mrb;
   mrb_assert(mrb);
 
-  int arena_index = mrb_gc_arena_save(mrb);
 
   mrb_value block = mrb_iv_get(mrb, mrb_async_context->callbacks, mrb_intern_lit(mrb, "@disconnect"));
   if (unlikely(mrb_type(block) != MRB_TT_PROC)) {
@@ -443,7 +427,6 @@ mrb_redisDisconnectCallback(const struct redisAsyncContext *async_context, int s
   argv[2] = mrb_fixnum_value(status);
 
   mrb_yield_argv(mrb, block, 3, argv);
-  mrb_gc_arena_restore(mrb, arena_index);
   if (unlikely(status == REDIS_ERR)) {
     mrb_hiredis_check_error(&async_context->c, mrb);
   }
@@ -452,14 +435,13 @@ mrb_redisDisconnectCallback(const struct redisAsyncContext *async_context, int s
 MRB_INLINE void
 mrb_redisConnectCallback(const struct redisAsyncContext *async_context, int status)
 {
-  if (!async_context->ev.data)
+  if (async_context->c.flags & REDIS_FREEING)
     return;
 
   mrb_hiredis_async_context *mrb_async_context = (mrb_hiredis_async_context *) async_context->ev.data;
   mrb_state *mrb = mrb_async_context->mrb;
   mrb_assert(mrb);
 
-  int arena_index = mrb_gc_arena_save(mrb);
 
   mrb_value block = mrb_iv_get(mrb, mrb_async_context->callbacks, mrb_intern_lit(mrb, "@connect"));
   if (unlikely(mrb_type(block) != MRB_TT_PROC)) {
@@ -473,7 +455,6 @@ mrb_redisConnectCallback(const struct redisAsyncContext *async_context, int stat
   argv[2] = mrb_fixnum_value(status);
 
   mrb_yield_argv(mrb, block, 3, argv);
-  mrb_gc_arena_restore(mrb, arena_index);
 
   if (unlikely(status == REDIS_ERR)) {
     mrb_hiredis_check_error(&async_context->c, mrb);
@@ -497,7 +478,7 @@ mrb_hiredis_setup_async_context(mrb_state *mrb, mrb_value self, mrb_value callba
   mrb_async_context->callbacks = callbacks;
   mrb_async_context->evloop = evloop;
   mrb_async_context->async_context = async_context;
-  mrb_async_context->fd = (&(async_context->c))->fd;
+  mrb_async_context->fd = async_context->c.fd;
   mrb_async_context->replies = replies;
   mrb_async_context->subscriptions = subscriptions;
 
@@ -566,19 +547,19 @@ mrb_redisAsyncHandleWrite(mrb_state *mrb, mrb_value self)
 MRB_INLINE void
 mrb_redisCallbackFn(struct redisAsyncContext *async_context, void *r, void *privdata)
 {
-  if (!async_context->ev.data)
+  if (async_context->c.flags & REDIS_FREEING)
     return;
 
   mrb_hiredis_async_context *mrb_async_context = (mrb_hiredis_async_context *) async_context->ev.data;
   mrb_state *mrb = mrb_async_context->mrb;
   mrb_assert(mrb);
 
-  int arena_index = mrb_gc_arena_save(mrb);
+  int ai = mrb_gc_arena_save(mrb);
   mrb_value reply = mrb_hiredis_get_reply((redisReply *) r, mrb);
   mrb_value block = mrb_obj_value(privdata);
   mrb_funcall(mrb, mrb_async_context->replies, "delete", 1, block);
   mrb_yield(mrb, block, reply);
-  mrb_gc_arena_restore(mrb, arena_index);
+  mrb_gc_arena_restore(mrb, ai);
 }
 
 static mrb_value

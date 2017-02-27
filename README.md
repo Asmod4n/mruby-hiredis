@@ -53,6 +53,17 @@ loop do
 end
 ```
 
+Async Client
+------------
+
+```ruby
+async = Hiredis::Async.new #(callbacks = Hiredis::Async::Callbacks.new, evloop = RedisAe.new, host_or_path = "localhost", port = 6379)
+async.queue(:set, "foo", "bar")
+async.evloop.run_once
+async.queue(:get, "foo") {|reply| puts reply}
+async.evloop.run_once
+```
+
 Disque
 ------
 
