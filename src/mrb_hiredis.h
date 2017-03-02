@@ -16,6 +16,14 @@
 #include <mruby/hash.h>
 #include <strings.h>
 
+#if (__GNUC__ >= 3) || (__INTEL_COMPILER >= 800) || defined(__clang__)
+# define likely(x) __builtin_expect(!!(x), 1)
+# define unlikely(x) __builtin_expect(!!(x), 0)
+#else
+# define likely(x) (x)
+# define unlikely(x) (x)
+#endif
+
 static void
 mrb_redisFree(mrb_state *mrb, void *p)
 {
@@ -26,30 +34,27 @@ static const struct mrb_data_type mrb_redisContext_type = {
   "$i_mrb_redisContext_type", mrb_redisFree
 };
 
-static void
-mrb_redisAsyncFree(mrb_state *mrb, void *p)
-{
-  redisAsyncContext *async_context = (redisAsyncContext *) p;
-  if (async_context->ev.data) {
-    mrb_free(mrb, async_context->ev.data);
-    async_context->ev.data = NULL;
-  }
-  redisAsyncFree(async_context);
-}
-
-static const struct mrb_data_type mrb_redisAsyncContext_type = {
-  "$i_mrb_redisContext_type", mrb_redisAsyncFree
-};
-
 typedef struct {
   mrb_state *mrb;
   mrb_value self;
   mrb_value callbacks;
   mrb_value evloop;
-  redisAsyncContext *async_context;
   int fd;
   mrb_value replies;
   mrb_value subscriptions;
 } mrb_hiredis_async_context;
+
+static void
+mrb_redisAsyncFree(mrb_state *mrb, void *p)
+{
+  redisAsyncContext *async_context = (redisAsyncContext *) p;
+  mrb_free(mrb, async_context->ev.data);
+  async_context->ev.data = NULL;
+  redisAsyncFree((redisAsyncContext *) p);
+}
+
+static const struct mrb_data_type mrb_redisAsyncContext_type = {
+  "$i_mrb_redisContext_type", mrb_redisAsyncFree
+};
 
 #endif

@@ -1,14 +1,6 @@
 #include "mruby/hiredis.h"
 #include "mrb_hiredis.h"
 
-#if (__GNUC__ >= 3) || (__INTEL_COMPILER >= 800) || defined(__clang__)
-# define likely(x) __builtin_expect(!!(x), 1)
-# define unlikely(x) __builtin_expect(!!(x), 0)
-#else
-# define likely(x) (x)
-# define unlikely(x) (x)
-#endif
-
 MRB_INLINE void
 mrb_hiredis_check_error(const redisContext *context, mrb_state *mrb)
 {
@@ -84,8 +76,7 @@ mrb_hiredis_get_reply(redisReply *reply, mrb_state *mrb)
         return mrb_nil_value();
         break;
       case REDIS_REPLY_ERROR: {
-        mrb_value err = mrb_str_new(mrb, reply->str, reply->len);
-        return mrb_exc_new_str(mrb, E_HIREDIS_REPLY_ERROR, err);
+        return mrb_exc_new_str(mrb, E_HIREDIS_REPLY_ERROR, mrb_str_new(mrb, reply->str, reply->len));
       } break;
       default:
         mrb_raise(mrb, E_HIREDIS_ERROR, "unknown reply type");
@@ -377,34 +368,6 @@ mrb_hiredis_delWrite(void *privdata)
 }
 
 MRB_INLINE void
-mrb_hiredis_cleanup(void *privdata)
-{
-  if (!privdata)
-    return;
-
-  mrb_hiredis_async_context *mrb_async_context = (mrb_hiredis_async_context *) privdata;
-  mrb_state *mrb = mrb_async_context->mrb;
-  mrb_assert(mrb);
-
-  mrb_value block = mrb_iv_get(mrb, mrb_async_context->callbacks, mrb_intern_lit(mrb, "@cleanup"));
-  if (unlikely(mrb_type(block) != MRB_TT_PROC)) {
-    mrb_raise(mrb, E_ARGUMENT_ERROR, "cleanup callback missing");
-    return;
-  }
-
-  mrb_value argv[3];
-  argv[0] = mrb_async_context->self;
-  argv[1] = mrb_async_context->evloop;
-  argv[2] = mrb_fixnum_value(mrb_async_context->fd);
-
-  mrb_yield_argv(mrb, block, 3, argv);
-
-  mrb_data_init(mrb_async_context->self, NULL, NULL);
-  mrb_free(mrb, privdata);
-  mrb_async_context->async_context->ev.data = NULL;
-}
-
-MRB_INLINE void
 mrb_redisDisconnectCallback(const struct redisAsyncContext *async_context, int status)
 {
   if (async_context->c.flags & REDIS_FREEING)
@@ -435,13 +398,9 @@ mrb_redisDisconnectCallback(const struct redisAsyncContext *async_context, int s
 MRB_INLINE void
 mrb_redisConnectCallback(const struct redisAsyncContext *async_context, int status)
 {
-  if (async_context->c.flags & REDIS_FREEING)
-    return;
-
   mrb_hiredis_async_context *mrb_async_context = (mrb_hiredis_async_context *) async_context->ev.data;
   mrb_state *mrb = mrb_async_context->mrb;
   mrb_assert(mrb);
-
 
   mrb_value block = mrb_iv_get(mrb, mrb_async_context->callbacks, mrb_intern_lit(mrb, "@connect"));
   if (unlikely(mrb_type(block) != MRB_TT_PROC)) {
@@ -465,7 +424,6 @@ MRB_INLINE void
 mrb_hiredis_setup_async_context(mrb_state *mrb, mrb_value self, mrb_value callbacks, mrb_value evloop, redisAsyncContext *async_context)
 {
   mrb_iv_set(mrb, self, mrb_intern_lit(mrb, "@callbacks"), callbacks);
-  mrb_iv_set(mrb, callbacks, mrb_intern_lit(mrb, "@evloop"), evloop);
   mrb_iv_set(mrb, self, mrb_intern_lit(mrb, "@evloop"), evloop);
   mrb_value replies = mrb_ary_new(mrb);
   mrb_iv_set(mrb, self, mrb_intern_lit(mrb, "replies"), replies);
@@ -477,7 +435,6 @@ mrb_hiredis_setup_async_context(mrb_state *mrb, mrb_value self, mrb_value callba
   mrb_async_context->self = self;
   mrb_async_context->callbacks = callbacks;
   mrb_async_context->evloop = evloop;
-  mrb_async_context->async_context = async_context;
   mrb_async_context->fd = async_context->c.fd;
   mrb_async_context->replies = replies;
   mrb_async_context->subscriptions = subscriptions;
@@ -487,7 +444,6 @@ mrb_hiredis_setup_async_context(mrb_state *mrb, mrb_value self, mrb_value callba
   async_context->ev.delRead = mrb_hiredis_delRead;
   async_context->ev.addWrite = mrb_hiredis_addWrite;
   async_context->ev.delWrite = mrb_hiredis_delWrite;
-  async_context->ev.cleanup = mrb_hiredis_cleanup;
   redisAsyncSetDisconnectCallback(async_context, mrb_redisDisconnectCallback);
   redisAsyncSetConnectCallback(async_context, mrb_redisConnectCallback);
 }

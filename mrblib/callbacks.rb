@@ -37,17 +37,6 @@ class Hiredis
             remove_instance_variable(:@write_cb)
           end
         end
-
-        @cleanup = lambda do |async, evloop, fd|
-          if @read_cb
-            evloop.delete_file_event(@read_cb)
-            remove_instance_variable(:@read_cb)
-          end
-          if @write_cb
-            evloop.delete_file_event(@write_cb)
-            remove_instance_variable(:@write_cb)
-          end
-        end
       end
 
       def disconnect(&block)
@@ -94,11 +83,6 @@ class Hiredis
           remove_instance_variable(:@write_cb)
         end
         @delWrite = block
-      end
-
-      def cleanup(&block)
-        raise ArgumentError, "no block given" unless block_given?
-        @cleanup = block
       end
     end
   end
