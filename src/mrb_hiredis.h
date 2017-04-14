@@ -50,7 +50,7 @@ mrb_redisAsyncFree(mrb_state *mrb, void *p)
   redisAsyncContext *async_context = (redisAsyncContext *) p;
   mrb_free(mrb, async_context->ev.data);
   async_context->ev.data = NULL;
-  redisAsyncFree((redisAsyncContext *) p);
+  redisAsyncFree(async_context);
 }
 
 static const struct mrb_data_type mrb_redisAsyncContext_type = {
