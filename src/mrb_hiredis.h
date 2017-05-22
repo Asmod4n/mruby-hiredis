@@ -1,8 +1,8 @@
 ﻿#ifndef MRB_HIREDIS_H
 #define MRB_HIREDIS_H
 
-#include "hiredis.h"
-#include "async.h"
+#include <hiredis/hiredis.h>
+#include <hiredis/async.h>
 #include <mruby/data.h>
 #include <errno.h>
 #include <mruby/error.h>

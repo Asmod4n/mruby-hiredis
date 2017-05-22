@@ -13,4 +13,18 @@ MRuby::Gem::Specification.new('mruby-hiredis') do |spec|
   else
     spec.linker.libraries << 'pthread'
   end
+
+  if spec.cc.search_header_path('hiredis/hiredis.h') && spec.cc.search_header_path('hiredis/async.h')
+    spec.linker.libraries << 'hiredis'
+  else
+    hiredis_src = "#{spec.dir}/deps"
+    spec.cc.include_paths << "#{hiredis_src}"
+    spec.objs += %W(
+      #{hiredis_src}/hiredis/async.c
+      #{hiredis_src}/hiredis/hiredis.c
+      #{hiredis_src}/hiredis/net.c
+      #{hiredis_src}/hiredis/read.c
+      #{hiredis_src}/hiredis/sds.c
+    ).map { |f| f.relative_path_from(dir).pathmap("#{build_dir}/%X#{spec.exts.object}" ) }
+  end
 end
