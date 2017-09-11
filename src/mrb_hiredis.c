@@ -265,7 +265,7 @@ mrb_redisGetBulkReply(mrb_state *mrb, mrb_value self)
   return bulk_reply;
 }
 
-#if (HIREDIS_MAJOR >= 0) && (HIREDIS_MINOR >= 13)
+#if ((HIREDIS_MAJOR == 0) && (HIREDIS_MINOR >= 13) || (HIREDIS_MAJOR > 0))
 static mrb_value
 mrb_redisReconnect(mrb_state *mrb, mrb_value self)
 {
@@ -612,7 +612,7 @@ mrb_mruby_hiredis_gem_init(mrb_state* mrb)
   mrb_define_method(mrb, hiredis_class, "queue",      mrb_redisAppendCommandArgv, (MRB_ARGS_REQ(1)|MRB_ARGS_REST()));
   mrb_define_method(mrb, hiredis_class, "reply",      mrb_redisGetReply,          MRB_ARGS_NONE());
   mrb_define_method(mrb, hiredis_class, "bulk_reply", mrb_redisGetBulkReply,      MRB_ARGS_NONE());
-#if (HIREDIS_MAJOR >= 0) && (HIREDIS_MINOR >= 13)
+#if ((HIREDIS_MAJOR == 0) && (HIREDIS_MINOR >= 13) || (HIREDIS_MAJOR > 0))
   mrb_define_method(mrb, hiredis_class, "reconnect",  mrb_redisReconnect,         MRB_ARGS_NONE());
 #endif
 
