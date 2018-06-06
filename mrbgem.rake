@@ -2,7 +2,7 @@ require_relative 'mrblib/version'
 
 MRuby::Gem::Specification.new('mruby-hiredis') do |spec|
   spec.license = 'Apache-2'
-  spec.author  = 'Hendrik Beskow'
+  spec.author  = 'Hendrik'
   spec.summary = 'hiredis bindings for mruby'
   spec.version = Hiredis::VERSION
   spec.add_dependency 'mruby-errno'
