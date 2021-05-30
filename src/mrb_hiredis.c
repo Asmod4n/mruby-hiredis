@@ -531,16 +531,19 @@ mrb_redisCallbackFn(struct redisAsyncContext *async_context, void *r, void *priv
   if (async_context->c.flags & REDIS_FREEING)
     return;
 
-  mrb_hiredis_async_context *mrb_async_context = (mrb_hiredis_async_context *) async_context->ev.data;
-  mrb_state *mrb = mrb_async_context->mrb;
-  mrb_assert(mrb);
-
-  int ai = mrb_gc_arena_save(mrb);
-  mrb_value reply = mrb_hiredis_get_reply((redisReply *) r, mrb);
-  mrb_value block = mrb_obj_value(privdata);
-  mrb_funcall(mrb, mrb_async_context->replies, "delete", 1, block);
-  mrb_yield(mrb, block, reply);
-  mrb_gc_arena_restore(mrb, ai);
+  if (r) {
+    mrb_hiredis_async_context *mrb_async_context = (mrb_hiredis_async_context *)async_context->ev.data;
+    mrb_state *mrb = mrb_async_context->mrb;
+    mrb_assert(mrb);
+    int ai = mrb_gc_arena_save(mrb);
+    mrb_value reply = mrb_hiredis_get_reply((redisReply *)r, mrb);
+    mrb_value block = mrb_obj_value(privdata);
+    if (likely(mrb_type(block) == MRB_TT_PROC)) {
+      mrb_funcall(mrb, mrb_async_context->replies, "delete", 1, block);
+      mrb_yield(mrb, block, reply);
+    }
+    mrb_gc_arena_restore(mrb, ai);
+  }
 }
 
 static mrb_value
