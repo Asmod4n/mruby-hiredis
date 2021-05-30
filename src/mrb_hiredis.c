@@ -288,7 +288,7 @@ mrb_hiredis_addRead(void *privdata)
   mrb_hiredis_async_context *mrb_async_context = (mrb_hiredis_async_context *) privdata;
   mrb_state *mrb = mrb_async_context->mrb;
   mrb_assert(mrb);
-
+  int ai = mrb_gc_arena_save(mrb);
 
   mrb_value block = mrb_iv_get(mrb, mrb_async_context->callbacks, mrb_intern_lit(mrb, "@addRead"));
   if (unlikely(mrb_type(block) != MRB_TT_PROC)) {
@@ -301,7 +301,9 @@ mrb_hiredis_addRead(void *privdata)
   argv[1] = mrb_async_context->evloop;
   argv[2] = mrb_fixnum_value(mrb_async_context->fd);
 
+  
   mrb_yield_argv(mrb, block, 3, argv);
+  mrb_gc_arena_restore(mrb, ai);
 }
 
 MRB_INLINE void
@@ -312,6 +314,7 @@ mrb_hiredis_delRead(void *privdata)
   mrb_hiredis_async_context *mrb_async_context = (mrb_hiredis_async_context *) privdata;
   mrb_state *mrb = mrb_async_context->mrb;
   mrb_assert(mrb);
+  int ai = mrb_gc_arena_save(mrb);
 
   mrb_value block = mrb_iv_get(mrb, mrb_async_context->callbacks, mrb_intern_lit(mrb, "@delRead"));
   if (unlikely(mrb_type(block) != MRB_TT_PROC)) {
@@ -325,6 +328,7 @@ mrb_hiredis_delRead(void *privdata)
   argv[2] = mrb_fixnum_value(mrb_async_context->fd);
 
   mrb_yield_argv(mrb, block, 3, argv);
+  mrb_gc_arena_restore(mrb, ai);
 }
 
 MRB_INLINE void
@@ -335,6 +339,7 @@ mrb_hiredis_addWrite(void *privdata)
   mrb_hiredis_async_context *mrb_async_context = (mrb_hiredis_async_context *) privdata;
   mrb_state *mrb = mrb_async_context->mrb;
   mrb_assert(mrb);
+  int ai = mrb_gc_arena_save(mrb);
 
   mrb_value block = mrb_iv_get(mrb, mrb_async_context->callbacks, mrb_intern_lit(mrb, "@addWrite"));
   if (unlikely(mrb_type(block) != MRB_TT_PROC)) {
@@ -348,6 +353,7 @@ mrb_hiredis_addWrite(void *privdata)
   argv[2] = mrb_fixnum_value(mrb_async_context->fd);
 
   mrb_yield_argv(mrb, block, 3, argv);
+  mrb_gc_arena_restore(mrb, ai);
 }
 
 MRB_INLINE void
@@ -358,6 +364,7 @@ mrb_hiredis_delWrite(void *privdata)
   mrb_hiredis_async_context *mrb_async_context = (mrb_hiredis_async_context *) privdata;
   mrb_state *mrb = mrb_async_context->mrb;
   mrb_assert(mrb);
+  int ai = mrb_gc_arena_save(mrb);
 
   mrb_value block = mrb_iv_get(mrb, mrb_async_context->callbacks, mrb_intern_lit(mrb, "@delWrite"));
   if (unlikely(mrb_type(block) != MRB_TT_PROC)) {
@@ -371,6 +378,7 @@ mrb_hiredis_delWrite(void *privdata)
   argv[2] = mrb_fixnum_value(mrb_async_context->fd);
 
   mrb_yield_argv(mrb, block, 3, argv);
+  mrb_gc_arena_restore(mrb, ai);
 }
 
 MRB_INLINE void
@@ -382,7 +390,7 @@ mrb_redisDisconnectCallback(const struct redisAsyncContext *async_context, int s
   mrb_hiredis_async_context *mrb_async_context = (mrb_hiredis_async_context *) async_context->ev.data;
   mrb_state *mrb = mrb_async_context->mrb;
   mrb_assert(mrb);
-
+  int ai = mrb_gc_arena_save(mrb);
 
   mrb_value block = mrb_iv_get(mrb, mrb_async_context->callbacks, mrb_intern_lit(mrb, "@disconnect"));
   if (unlikely(mrb_type(block) != MRB_TT_PROC)) {
@@ -396,6 +404,7 @@ mrb_redisDisconnectCallback(const struct redisAsyncContext *async_context, int s
   argv[2] = mrb_fixnum_value(status);
 
   mrb_yield_argv(mrb, block, 3, argv);
+  mrb_gc_arena_restore(mrb, ai);
   if (unlikely(status == REDIS_ERR)) {
     mrb_hiredis_check_error(&async_context->c, mrb);
   }
@@ -407,6 +416,7 @@ mrb_redisConnectCallback(const struct redisAsyncContext *async_context, int stat
   mrb_hiredis_async_context *mrb_async_context = (mrb_hiredis_async_context *) async_context->ev.data;
   mrb_state *mrb = mrb_async_context->mrb;
   mrb_assert(mrb);
+  int ai = mrb_gc_arena_save(mrb);
 
   mrb_value block = mrb_iv_get(mrb, mrb_async_context->callbacks, mrb_intern_lit(mrb, "@connect"));
   if (unlikely(mrb_type(block) != MRB_TT_PROC)) {
@@ -420,7 +430,7 @@ mrb_redisConnectCallback(const struct redisAsyncContext *async_context, int stat
   argv[2] = mrb_fixnum_value(status);
 
   mrb_yield_argv(mrb, block, 3, argv);
-
+  mrb_gc_arena_restore(mrb, ai);
   if (unlikely(status == REDIS_ERR)) {
     mrb_hiredis_check_error(&async_context->c, mrb);
   }
