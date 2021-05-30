@@ -5,22 +5,21 @@ static void
 mrb_hiredis_check_error(const redisContext *context, mrb_state *mrb)
 {
   if (context->err != 0) {
-    if (errno) {
+    switch (context->err) {
+    case REDIS_ERR_IO:
       mrb_sys_fail(mrb, context->errstr);
-    } else {
-      switch (context->err) {
-        case REDIS_ERR_EOF:
-          mrb_raise(mrb, E_EOF_ERROR, context->errstr);
-          break;
-        case REDIS_ERR_PROTOCOL:
-          mrb_raise(mrb, E_HIREDIS_ERR_PROTOCOL, context->errstr);
-          break;
-        case REDIS_ERR_OOM:
-          mrb_raise(mrb, E_HIREDIS_ERR_OOM, context->errstr);
-          break;
-        default:
-          mrb_raise(mrb, E_HIREDIS_ERROR, context->errstr);
-      }
+      break;
+    case REDIS_ERR_EOF:
+      mrb_raise(mrb, E_EOF_ERROR, context->errstr);
+      break;
+    case REDIS_ERR_PROTOCOL:
+      mrb_raise(mrb, E_HIREDIS_ERR_PROTOCOL, context->errstr);
+      break;
+    case REDIS_ERR_OOM:
+      mrb_raise(mrb, E_HIREDIS_ERR_OOM, context->errstr);
+      break;
+    default:
+      mrb_raise(mrb, E_HIREDIS_ERROR, context->errstr);
     }
   }
 }
@@ -61,9 +60,13 @@ mrb_hiredis_get_reply(redisReply *reply, mrb_state *mrb)
     switch (reply->type) {
       case REDIS_REPLY_STRING:
       case REDIS_REPLY_STATUS:
+      case REDIS_REPLY_BIGNUM:
+      case REDIS_REPLY_VERB:
         return mrb_str_new(mrb, reply->str, reply->len);
         break;
       case REDIS_REPLY_ARRAY:
+      case REDIS_REPLY_MAP:
+      case REDIS_REPLY_ATTR:
         return mrb_hiredis_get_ary_reply(reply, mrb);
         break;
       case REDIS_REPLY_INTEGER: {
@@ -75,9 +78,15 @@ mrb_hiredis_get_reply(redisReply *reply, mrb_state *mrb)
       case REDIS_REPLY_NIL:
         return mrb_nil_value();
         break;
-      case REDIS_REPLY_ERROR: {
+      case REDIS_REPLY_ERROR:
         return mrb_exc_new_str(mrb, E_HIREDIS_REPLY_ERROR, mrb_str_new(mrb, reply->str, reply->len));
-      } break;
+        break;
+      case REDIS_REPLY_DOUBLE:
+        return mrb_float_value(mrb, strtod(reply->str, NULL));
+        break;
+      case REDIS_REPLY_BOOL:
+        return mrb_bool_value(reply->integer);
+        break;
       default:
         mrb_raise(mrb, E_HIREDIS_ERROR, "unknown reply type");
     }

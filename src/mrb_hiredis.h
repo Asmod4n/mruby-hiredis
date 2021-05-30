@@ -15,6 +15,8 @@
 #include <mruby/variable.h>
 #include <mruby/hash.h>
 #include <strings.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #if (__GNUC__ >= 3) || (__INTEL_COMPILER >= 800) || defined(__clang__)
 # define likely(x) __builtin_expect(!!(x), 1)
