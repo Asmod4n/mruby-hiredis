@@ -1,5 +1,5 @@
 MRuby::Build.new do |conf|
-  toolchain :gcc
+  toolchain :clang
   enable_debug
   conf.enable_sanitizer "address,undefined"
   conf.enable_debug
