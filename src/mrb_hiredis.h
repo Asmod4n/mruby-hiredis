@@ -8,6 +8,7 @@
 #include <mruby/error.h>
 #include <mruby/numeric.h>
 #include <mruby/array.h>
+#include <mruby/hash.h>
 #include <mruby/string.h>
 #include <mruby/throw.h>
 #include <string.h>
@@ -37,6 +38,15 @@ static const struct mrb_data_type mrb_redisContext_type = {
 };
 
 typedef struct {
+  mrb_value self;
+  redisReply *reply;
+} mrb_redisGetReply_cb_data;
+
+static const struct mrb_data_type mrb_redisCallbackFn_cb_data_type = {
+  "$i_mrb_redisCallbackFn_cb_data_type", mrb_free
+};
+
+typedef struct {
   mrb_state *mrb;
   mrb_value self;
   mrb_value callbacks;
@@ -45,6 +55,7 @@ typedef struct {
   mrb_value replies;
   mrb_value subscriptions;
 } mrb_hiredis_async_context;
+
 
 static void
 mrb_redisAsyncFree(mrb_state *mrb, void *p)

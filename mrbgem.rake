@@ -7,6 +7,8 @@ MRuby::Gem::Specification.new('mruby-hiredis') do |spec|
   spec.version = Hiredis::VERSION
   spec.add_dependency 'mruby-errno'
   spec.add_dependency 'mruby-redis-ae'
+  spec.add_dependency 'mruby-error'
+  spec.add_dependency 'mruby-metaprog'
 
   if build.toolchains.include?('android')
     spec.cc.defines << 'HAVE_PTHREADS'
@@ -19,7 +21,7 @@ MRuby::Gem::Specification.new('mruby-hiredis') do |spec|
   else
     hiredis_src = "#{spec.dir}/deps"
     spec.cc.include_paths << "#{hiredis_src}"
-    spec.objs += %W(
+    source_files = %W(
       #{hiredis_src}/hiredis/alloc.c
       #{hiredis_src}/hiredis/async.c
       #{hiredis_src}/hiredis/dict.c
@@ -28,7 +30,8 @@ MRuby::Gem::Specification.new('mruby-hiredis') do |spec|
       #{hiredis_src}/hiredis/read.c
       #{hiredis_src}/hiredis/sds.c
       #{hiredis_src}/hiredis/sockcompat.c
-      #{hiredis_src}/hiredis/ssl.c
-    ).map { |f| f.relative_path_from(dir).pathmap("#{build_dir}/%X#{spec.exts.object}" ) }
+    )
+    source_files << "#{hiredis_src}/hiredis/ssl.c" if spec.cc.search_header_path('openssl/ssl.h')
+    spec.objs += source_files.map { |f| f.relative_path_from(dir).pathmap("#{build_dir}/%X#{spec.exts.object}" ) }
   end
 end

@@ -50,11 +50,12 @@ end
 
 assert("Hiredis::Async") do
   async = Hiredis::Async.new
-  async.evloop.run_once
   async.queue(:del, "mruby-hiredis-test:foo")
-  async.evloop.run_once
-  async.queue(:incr, "mruby-hiredis-test:foo") {|reply| assert_equal(1, reply)}
-  async.evloop.run_once
+  async.queue(:incr, "mruby-hiredis-test:foo") do |reply|
+    assert_equal(1, reply)
+    async.disconnect
+  end
+  async.evloop.run
 end
 
 assert("Defines IOError when missing") do
