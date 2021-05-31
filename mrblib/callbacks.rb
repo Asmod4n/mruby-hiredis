@@ -3,6 +3,14 @@ class Hiredis
     class Callbacks
       def initialize
         @disconnect = lambda do |async, evloop, status|
+          if @read_cb
+            evloop.delete_file_event(@read_cb)
+            remove_instance_variable(:@read_cb)
+          end
+          if @write_cb
+            evloop.delete_file_event(@write_cb)
+            remove_instance_variable(:@write_cb)
+          end
           evloop.stop
         end
 
