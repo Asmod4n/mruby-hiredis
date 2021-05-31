@@ -122,7 +122,10 @@ mrb_hiredis_get_map_reply(redisReply *reply, mrb_state *mrb)
 
   size_t element_couter;
   for (element_couter = 0; element_couter < reply->elements; element_couter++) {
-    mrb_hash_set(mrb, map, mrb_hiredis_get_reply(reply->element[element_couter], mrb), mrb_hiredis_get_reply(reply->element[++element_couter], mrb));
+    mrb_value key = mrb_hiredis_get_reply(reply->element[element_couter], mrb);
+    element_couter++;
+    mrb_value value = mrb_hiredis_get_reply(reply->element[element_couter], mrb);
+    mrb_hash_set(mrb, map, key, value);
     mrb_gc_arena_restore(mrb, ai);
   }
   return map;
@@ -620,7 +623,7 @@ mrb_redisAsyncCommandArgv(mrb_state *mrb, mrb_value self)
   if (mrb_type(block) == MRB_TT_PROC) {
     mrb_value *block_p;
     struct RData *block_cb_data_p;
-    Data_Make_Struct(mrb, mrb_class_get_under(mrb, mrb_class(mrb, self), "_BlockData"), mrb_value, &mrb_redisCallbackFn_cb_data_type, block_p, block_cb_data_p);
+    Data_Make_Struct(mrb, mrb_class_get_under(mrb, mrb_obj_class(mrb, self), "_BlockData"), mrb_value, &mrb_redisCallbackFn_cb_data_type, block_p, block_cb_data_p);
     memcpy(block_p, &block, sizeof(mrb_value));
     mrb_value block_cb_data = mrb_obj_value(block_cb_data_p);
     mrb_iv_set(mrb, block_cb_data, mrb_intern_lit(mrb, "block"), block);
