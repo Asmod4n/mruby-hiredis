@@ -435,11 +435,11 @@ mrb_redisDisconnectCallback(const struct redisAsyncContext *async_context, int s
 
   mrb_yield_argv(mrb, block, 3, argv);
   mrb_gc_arena_restore(mrb, ai);
+  mrb_data_init(mrb_async_context->self, NULL, NULL);
+  mrb_free(mrb, mrb_async_context);
   if (unlikely(status == REDIS_ERR)) {
     mrb_hiredis_check_error(&async_context->c, mrb);
   }
-  mrb_data_init(mrb_async_context->self, NULL, NULL);
-  mrb_free(mrb, mrb_async_context);
 }
 
 MRB_INLINE void
