@@ -21,11 +21,7 @@ class Hiredis
         end
 
         @addRead = lambda do |async, evloop, fd|
-          if @read_cb
-            evloop.delete_file_event(@read_cb)
-            remove_instance_variable(:@read_cb)
-          end
-          @read_cb = evloop.create_file_event(fd, RedisAe::READABLE) do |fd, mask|
+          @read_cb ||= evloop.create_file_event(fd, RedisAe::READABLE) do |fd, mask|
             async.read
           end
         end
@@ -38,11 +34,7 @@ class Hiredis
         end
 
         @addWrite = lambda do |async, evloop, fd|
-          if @write_cb
-            evloop.delete_file_event(@write_cb)
-            remove_instance_variable(:@write_cb)
-          end
-          @write_cb = evloop.create_file_event(fd, RedisAe::WRITABLE) do |fd, mask|
+          @write_cb ||= evloop.create_file_event(fd, RedisAe::WRITABLE) do |fd, mask|
             async.write
           end
         end
