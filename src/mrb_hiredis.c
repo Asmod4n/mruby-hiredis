@@ -478,9 +478,6 @@ mrb_redisDisconnectCallback(const struct redisAsyncContext *async_context, int s
   mrb_gc_arena_restore(mrb, ai);
   mrb_data_init(mrb_async_context->self, NULL, NULL);
   mrb_free(mrb, mrb_async_context);
-  if (unlikely(status == REDIS_ERR)) {
-    mrb_hiredis_check_error(&async_context->c, mrb);
-  }
 }
 
 MRB_INLINE void
@@ -511,7 +508,6 @@ mrb_redisConnectCallback(const struct redisAsyncContext *async_context, int stat
   if (unlikely(status == REDIS_ERR)) {
     mrb_data_init(mrb_async_context->self, NULL, NULL);
     mrb_free(mrb, mrb_async_context);
-    mrb_hiredis_check_error(&async_context->c, mrb);
   }
 }
 
@@ -606,7 +602,7 @@ mrb_redisAsyncHandleWrite(mrb_state *mrb, mrb_value self)
 MRB_INLINE void
 mrb_redisCallbackFn(struct redisAsyncContext *async_context, void *r, void *privdata)
 {
-  if (async_context->c.flags & REDIS_FREEING)
+  if (async_context->c.flags & (REDIS_DISCONNECTING | REDIS_FREEING))
     return;
 
   mrb_hiredis_async_context *mrb_async_context = (mrb_hiredis_async_context *)async_context->ev.data;

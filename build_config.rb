@@ -1,7 +1,8 @@
 MRuby::Build.new do |conf|
-  toolchain :clang
+  toolchain :gcc
   enable_debug
-  conf.enable_sanitizer "address,undefined"
+  conf.enable_sanitizer "address,undefined,leak"
+  conf.cc.flags << '-fno-omit-frame-pointer' << '-ggdb'
   conf.enable_debug
   conf.enable_bintest
   conf.enable_test
