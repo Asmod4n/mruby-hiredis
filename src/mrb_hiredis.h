@@ -28,13 +28,13 @@
 #endif
 
 static void
-mrb_redisFree(mrb_state *mrb, void *p)
+mrb_redisFree_gc(mrb_state *mrb, void *p)
 {
   redisFree((redisContext *) p);
 }
 
 static const struct mrb_data_type mrb_redisContext_type = {
-  "$i_mrb_redisContext_type", mrb_redisFree
+  "$i_mrb_redisContext_type", mrb_redisFree_gc
 };
 
 typedef struct {
@@ -58,7 +58,7 @@ typedef struct {
 
 
 static void
-mrb_redisAsyncFree(mrb_state *mrb, void *p)
+mrb_redisAsyncFree_gc(mrb_state *mrb, void *p)
 {
   redisAsyncContext *async_context = (redisAsyncContext *) p;
   mrb_free(mrb, async_context->ev.data);
@@ -67,7 +67,7 @@ mrb_redisAsyncFree(mrb_state *mrb, void *p)
 }
 
 static const struct mrb_data_type mrb_redisAsyncContext_type = {
-  "$i_mrb_redisContext_type", mrb_redisAsyncFree
+  "$i_mrb_redisContext_type", mrb_redisAsyncFree_gc
 };
 
 #endif

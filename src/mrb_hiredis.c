@@ -50,6 +50,20 @@ mrb_redisConnect(mrb_state *mrb, mrb_value self)
   return self;
 }
 
+static mrb_value
+mrb_redisFree(mrb_state *mrb, mrb_value self)
+{
+  redisContext *context = (redisContext *) DATA_PTR(self);
+  if (!context) {
+    mrb_raise(mrb, E_IO_ERROR, "closed stream");
+  }
+
+  redisFree(context);
+  mrb_data_init(self, NULL, NULL);
+
+  return mrb_nil_value();
+}
+
 MRB_INLINE mrb_value
 mrb_hiredis_get_ary_reply(redisReply *reply, mrb_state *mrb);
 
@@ -64,7 +78,6 @@ mrb_hiredis_get_reply(redisReply *reply, mrb_state *mrb)
       case REDIS_REPLY_STRING:
       case REDIS_REPLY_STATUS:
       case REDIS_REPLY_BIGNUM:
-      case REDIS_REPLY_VERB:
         return mrb_str_new(mrb, reply->str, reply->len);
         break;
       case REDIS_REPLY_ARRAY:
@@ -92,6 +105,13 @@ mrb_hiredis_get_reply(redisReply *reply, mrb_state *mrb)
       case REDIS_REPLY_BOOL:
         return mrb_bool_value(reply->integer);
         break;
+      case REDIS_REPLY_VERB: {
+        mrb_value argv[] = {
+          mrb_str_new(mrb, reply->str, reply->len),
+          mrb_str_new_cstr(mrb, reply->vtype)
+        };
+        return mrb_obj_new(mrb, mrb_class_get_under(mrb, mrb_class_get(mrb, "Hiredis"), "Verb"), 2, argv);
+      } break;
       default:
         mrb_raise(mrb, E_HIREDIS_ERROR, "unknown reply type");
     }
@@ -147,6 +167,11 @@ mrb_redisCommandArgv_ensure(mrb_state *mrb, mrb_value reply)
 static mrb_value
 mrb_redisCommandArgv(mrb_state *mrb, mrb_value self)
 {
+  redisContext *context = (redisContext *) DATA_PTR(self);
+  if (!context) {
+    mrb_raise(mrb, E_IO_ERROR, "closed stream");
+  }
+
   mrb_sym command;
   mrb_value *mrb_argv;
   mrb_int argc = 0;
@@ -159,7 +184,6 @@ mrb_redisCommandArgv(mrb_state *mrb, mrb_value self)
   mrb_int command_len;
   argv[0] = mrb_sym2name_len(mrb, command, &command_len);
   argvlen[0] = command_len;
-  mrb_value reply_val = self;
 
   mrb_int argc_current;
   for (argc_current = 1; argc_current < argc; argc_current++) {
@@ -168,22 +192,26 @@ mrb_redisCommandArgv(mrb_state *mrb, mrb_value self)
     argvlen[argc_current] = RSTRING_LEN(curr);
   }
 
-  redisContext *context = (redisContext *) DATA_PTR(self);
   errno = 0;
   redisReply *reply = redisCommandArgv(context, argc, argv, argvlen);
   if (likely(reply != NULL)) {
     mrb_value reply_cptr_value = mrb_cptr_value(mrb, reply);
-    reply_val = mrb_ensure(mrb, mrb_redisCommandArgv_cb, reply_cptr_value, mrb_redisCommandArgv_ensure, reply_cptr_value);
+    return mrb_ensure(mrb, mrb_redisCommandArgv_cb, reply_cptr_value, mrb_redisCommandArgv_ensure, reply_cptr_value);
   } else {
     mrb_hiredis_check_error(context, mrb);
   }
 
-  return reply_val;
+  return mrb_nil_value();
 }
 
 static mrb_value
 mrb_redisAppendCommandArgv(mrb_state *mrb, mrb_value self)
 {
+  redisContext *context = (redisContext *) DATA_PTR(self);
+  if (!context) {
+    mrb_raise(mrb, E_IO_ERROR, "closed stream");
+  }
+
   mrb_sym command;
   mrb_value *mrb_argv;
   mrb_int argc = 0;
@@ -214,7 +242,7 @@ mrb_redisAppendCommandArgv(mrb_state *mrb, mrb_value self)
     }
   }
 
-  redisContext *context = (redisContext *) DATA_PTR(self);
+
   errno = 0;
   int rc = redisAppendCommandArgv(context, argc, argv, argvlen);
   if (likely(rc == REDIS_OK)) {
@@ -259,19 +287,26 @@ static mrb_value
 mrb_redisGetReply(mrb_state *mrb, mrb_value self)
 {
   redisContext *context = (redisContext *) DATA_PTR(self);
-  redisReply *reply = NULL;
-  mrb_value reply_val = self;
-  errno = 0;
-  int rc = redisGetReply(context, (void **) &reply);
-  if (likely(rc == REDIS_OK && reply != NULL)) {
-    mrb_redisGetReply_cb_data cb_data = { self, reply };
-    mrb_value cb_data_val = mrb_cptr_value(mrb, &cb_data);
-    reply_val = mrb_ensure(mrb, mrb_redisGetReply_cb, cb_data_val, mrb_redisGetReply_ensure, cb_data_val);
-  } else {
-    mrb_hiredis_check_error(context, mrb);
+  if (!context) {
+    mrb_raise(mrb, E_IO_ERROR, "closed stream");
   }
 
-  return reply_val;
+  redisReply *reply = NULL;
+  errno = 0;
+  int rc = redisGetReply(context, (void **) &reply);
+  if (likely(rc == REDIS_OK)) {
+    if (reply != NULL) {
+      mrb_redisGetReply_cb_data cb_data = { self, reply };
+      mrb_value cb_data_val = mrb_cptr_value(mrb, &cb_data);
+      return mrb_ensure(mrb, mrb_redisGetReply_cb, cb_data_val, mrb_redisGetReply_ensure, cb_data_val);
+    } else {
+      return mrb_nil_value();
+    }
+  } else {
+    mrb_hiredis_check_error(context, mrb);
+    // Cannot happen, if it unlikely does the interpreter crashes.
+    return mrb_undef_value();
+  }
 }
 
 static mrb_value
@@ -302,6 +337,9 @@ static mrb_value
 mrb_redisReconnect(mrb_state *mrb, mrb_value self)
 {
   redisContext *context = (redisContext *) DATA_PTR(self);
+  if (!context) {
+    mrb_raise(mrb, E_IO_ERROR, "closed stream");
+  }
 
   int rc = redisReconnect(context);
   if (unlikely(rc == REDIS_ERR)) {
@@ -471,6 +509,8 @@ mrb_redisConnectCallback(const struct redisAsyncContext *async_context, int stat
   mrb_yield_argv(mrb, block, 3, argv);
   mrb_gc_arena_restore(mrb, ai);
   if (unlikely(status == REDIS_ERR)) {
+    mrb_data_init(mrb_async_context->self, NULL, NULL);
+    mrb_free(mrb, mrb_async_context);
     mrb_hiredis_check_error(&async_context->c, mrb);
   }
 }
@@ -687,6 +727,8 @@ mrb_mruby_hiredis_gem_init(mrb_state* mrb)
   mrb_define_class_under(mrb, hiredis_class, "OOMError",      hiredis_error_class);
 
   mrb_define_method(mrb, hiredis_class, "initialize", mrb_redisConnect,           MRB_ARGS_OPT(2));
+  mrb_define_method(mrb, hiredis_class, "free",       mrb_redisFree,              MRB_ARGS_NONE());
+  mrb_define_alias (mrb, hiredis_class, "close", "free");
   mrb_define_method(mrb, hiredis_class, "call",       mrb_redisCommandArgv,       (MRB_ARGS_REQ(1)|MRB_ARGS_REST()));
   mrb_define_method(mrb, hiredis_class, "queue",      mrb_redisAppendCommandArgv, (MRB_ARGS_REQ(1)|MRB_ARGS_REST()));
   mrb_define_method(mrb, hiredis_class, "reply",      mrb_redisGetReply,          MRB_ARGS_NONE());
