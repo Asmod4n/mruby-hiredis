@@ -361,19 +361,15 @@ mrb_hiredis_addRead(void *privdata)
   int ai = mrb_gc_arena_save(mrb);
 
   mrb_value block = mrb_iv_get(mrb, mrb_async_context->callbacks, mrb_intern_lit(mrb, "@addRead"));
-  if (unlikely(mrb_type(block) != MRB_TT_PROC)) {
-    mrb_raise(mrb, E_ARGUMENT_ERROR, "addRead callback missing");
-    return;
+  if (likely(mrb_type(block) == MRB_TT_PROC)) {
+    mrb_value argv[] = {
+      mrb_async_context->self,
+      mrb_async_context->evloop,
+      mrb_fixnum_value(mrb_async_context->fd)
+    };
+    mrb_yield_argv(mrb, block, 3, argv);
+    mrb_gc_arena_restore(mrb, ai);
   }
-
-  mrb_value argv[3];
-  argv[0] = mrb_async_context->self;
-  argv[1] = mrb_async_context->evloop;
-  argv[2] = mrb_fixnum_value(mrb_async_context->fd);
-
-
-  mrb_yield_argv(mrb, block, 3, argv);
-  mrb_gc_arena_restore(mrb, ai);
 }
 
 MRB_INLINE void
@@ -387,18 +383,15 @@ mrb_hiredis_delRead(void *privdata)
   int ai = mrb_gc_arena_save(mrb);
 
   mrb_value block = mrb_iv_get(mrb, mrb_async_context->callbacks, mrb_intern_lit(mrb, "@delRead"));
-  if (unlikely(mrb_type(block) != MRB_TT_PROC)) {
-    mrb_raise(mrb, E_ARGUMENT_ERROR, "delRead callback missing");
-    return;
+  if (likely(mrb_type(block) == MRB_TT_PROC)) {
+    mrb_value argv[] = {
+      mrb_async_context->self,
+      mrb_async_context->evloop,
+      mrb_fixnum_value(mrb_async_context->fd)
+    };
+    mrb_yield_argv(mrb, block, 3, argv);
+    mrb_gc_arena_restore(mrb, ai);
   }
-
-  mrb_value argv[3];
-  argv[0] = mrb_async_context->self;
-  argv[1] = mrb_async_context->evloop;
-  argv[2] = mrb_fixnum_value(mrb_async_context->fd);
-
-  mrb_yield_argv(mrb, block, 3, argv);
-  mrb_gc_arena_restore(mrb, ai);
 }
 
 MRB_INLINE void
@@ -412,18 +405,15 @@ mrb_hiredis_addWrite(void *privdata)
   int ai = mrb_gc_arena_save(mrb);
 
   mrb_value block = mrb_iv_get(mrb, mrb_async_context->callbacks, mrb_intern_lit(mrb, "@addWrite"));
-  if (unlikely(mrb_type(block) != MRB_TT_PROC)) {
-    mrb_raise(mrb, E_ARGUMENT_ERROR, "addWrite callback missing");
-    return;
+  if (likely(mrb_type(block) == MRB_TT_PROC)) {
+    mrb_value argv[] = {
+      mrb_async_context->self,
+      mrb_async_context->evloop,
+      mrb_fixnum_value(mrb_async_context->fd)
+    };
+    mrb_yield_argv(mrb, block, 3, argv);
+    mrb_gc_arena_restore(mrb, ai);
   }
-
-  mrb_value argv[3];
-  argv[0] = mrb_async_context->self;
-  argv[1] = mrb_async_context->evloop;
-  argv[2] = mrb_fixnum_value(mrb_async_context->fd);
-
-  mrb_yield_argv(mrb, block, 3, argv);
-  mrb_gc_arena_restore(mrb, ai);
 }
 
 MRB_INLINE void
@@ -437,18 +427,15 @@ mrb_hiredis_delWrite(void *privdata)
   int ai = mrb_gc_arena_save(mrb);
 
   mrb_value block = mrb_iv_get(mrb, mrb_async_context->callbacks, mrb_intern_lit(mrb, "@delWrite"));
-  if (unlikely(mrb_type(block) != MRB_TT_PROC)) {
-    mrb_raise(mrb, E_ARGUMENT_ERROR, "delWrite callback missing");
-    return;
+  if (likely(mrb_type(block) == MRB_TT_PROC)) {
+    mrb_value argv[] = {
+      mrb_async_context->self,
+      mrb_async_context->evloop,
+      mrb_fixnum_value(mrb_async_context->fd)
+    };
+    mrb_yield_argv(mrb, block, 3, argv);
+    mrb_gc_arena_restore(mrb, ai);
   }
-
-  mrb_value argv[3];
-  argv[0] = mrb_async_context->self;
-  argv[1] = mrb_async_context->evloop;
-  argv[2] = mrb_fixnum_value(mrb_async_context->fd);
-
-  mrb_yield_argv(mrb, block, 3, argv);
-  mrb_gc_arena_restore(mrb, ai);
 }
 
 MRB_INLINE void
@@ -464,18 +451,17 @@ mrb_redisDisconnectCallback(const struct redisAsyncContext *async_context, int s
   int ai = mrb_gc_arena_save(mrb);
 
   mrb_value block = mrb_iv_get(mrb, mrb_async_context->callbacks, mrb_intern_lit(mrb, "@disconnect"));
-  if (unlikely(mrb_type(block) != MRB_TT_PROC)) {
-    mrb_raise(mrb, E_ARGUMENT_ERROR, "disconnect callback missing");
-    return;
+  if (likely(mrb_type(block) == MRB_TT_PROC)) {
+    mrb_value argv[] = {
+      mrb_async_context->self,
+      mrb_async_context->evloop,
+      mrb_fixnum_value(status)
+    };
+
+    mrb_yield_argv(mrb, block, 3, argv);
+    mrb_gc_arena_restore(mrb, ai);
   }
 
-  mrb_value argv[3];
-  argv[0] = mrb_async_context->self;
-  argv[1] = mrb_async_context->evloop;
-  argv[2] = mrb_fixnum_value(status);
-
-  mrb_yield_argv(mrb, block, 3, argv);
-  mrb_gc_arena_restore(mrb, ai);
   mrb_data_init(mrb_async_context->self, NULL, NULL);
   mrb_free(mrb, mrb_async_context);
 }
@@ -493,18 +479,17 @@ mrb_redisConnectCallback(const struct redisAsyncContext *async_context, int stat
   int ai = mrb_gc_arena_save(mrb);
 
   mrb_value block = mrb_iv_get(mrb, mrb_async_context->callbacks, mrb_intern_lit(mrb, "@connect"));
-  if (unlikely(mrb_type(block) != MRB_TT_PROC)) {
-    mrb_raise(mrb, E_ARGUMENT_ERROR, "connect callback missing");
-    return;
+  if (likely(mrb_type(block) == MRB_TT_PROC)) {
+    mrb_value argv[] = {
+      mrb_async_context->self,
+      mrb_async_context->evloop,
+      mrb_fixnum_value(status)
+    };
+
+    mrb_yield_argv(mrb, block, 3, argv);
+    mrb_gc_arena_restore(mrb, ai);
   }
 
-  mrb_value argv[3];
-  argv[0] = mrb_async_context->self;
-  argv[1] = mrb_async_context->evloop;
-  argv[2] = mrb_fixnum_value(status);
-
-  mrb_yield_argv(mrb, block, 3, argv);
-  mrb_gc_arena_restore(mrb, ai);
   if (unlikely(status == REDIS_ERR)) {
     mrb_data_init(mrb_async_context->self, NULL, NULL);
     mrb_free(mrb, mrb_async_context);
@@ -620,9 +605,6 @@ mrb_redisCallbackFn(struct redisAsyncContext *async_context, void *r, void *priv
   if (likely(mrb_type(block) == MRB_TT_PROC)) {
     mrb_yield(mrb, block, reply);
     mrb_gc_arena_restore(mrb, ai);
-  } else {
-    mrb_gc_arena_restore(mrb, ai);
-    mrb_raise(mrb, E_ARGUMENT_ERROR, "callback missing");
   }
 }
 
