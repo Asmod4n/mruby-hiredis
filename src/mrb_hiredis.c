@@ -42,26 +42,30 @@ mrb_redisConnect(mrb_state *mrb, mrb_value self)
   }
   if (likely(context != NULL)) {
     mrb_data_init(self, context, &mrb_redisContext_type);
-    mrb_hiredis_check_error(context, mrb);
+    if (likely(context->err == 0)) {
+      return self;
+    } else {
+      mrb_hiredis_check_error(context, mrb);
+      return mrb_false_value();
+    }
   } else {
     mrb_sys_fail(mrb, "redisConnect");
+    return mrb_false_value();
   }
-
-  return self;
 }
 
 static mrb_value
 mrb_redisFree(mrb_state *mrb, mrb_value self)
 {
   redisContext *context = (redisContext *) DATA_PTR(self);
-  if (!context) {
+  if (likely(context)) {
+    redisFree(context);
+    mrb_data_init(self, NULL, NULL);
+    return mrb_nil_value();
+  } else {
     mrb_raise(mrb, E_IO_ERROR, "closed stream");
+    return mrb_false_value();
   }
-
-  redisFree(context);
-  mrb_data_init(self, NULL, NULL);
-
-  return mrb_nil_value();
 }
 
 MRB_INLINE mrb_value
@@ -168,90 +172,101 @@ static mrb_value
 mrb_redisCommandArgv(mrb_state *mrb, mrb_value self)
 {
   redisContext *context = (redisContext *) DATA_PTR(self);
-  if (!context) {
-    mrb_raise(mrb, E_IO_ERROR, "closed stream");
-  }
+  if (likely(context)) {
+    if (likely(context->err == 0)) {
+      mrb_sym command;
+      mrb_value *mrb_argv;
+      mrb_int argc = 0;
 
-  mrb_sym command;
-  mrb_value *mrb_argv;
-  mrb_int argc = 0;
+      mrb_get_args(mrb, "n*", &command, &mrb_argv, &argc);
+      argc++;
 
-  mrb_get_args(mrb, "n*", &command, &mrb_argv, &argc);
-  argc++;
+      const char *argv[argc];
+      size_t argvlen[argc];
+      mrb_int command_len;
+      argv[0] = mrb_sym2name_len(mrb, command, &command_len);
+      argvlen[0] = command_len;
 
-  const char *argv[argc];
-  size_t argvlen[argc];
-  mrb_int command_len;
-  argv[0] = mrb_sym2name_len(mrb, command, &command_len);
-  argvlen[0] = command_len;
+      mrb_int argc_current;
+      for (argc_current = 1; argc_current < argc; argc_current++) {
+        mrb_value curr = mrb_str_to_str(mrb, mrb_argv[argc_current - 1]);
+        argv[argc_current] = RSTRING_PTR(curr);
+        argvlen[argc_current] = RSTRING_LEN(curr);
+      }
 
-  mrb_int argc_current;
-  for (argc_current = 1; argc_current < argc; argc_current++) {
-    mrb_value curr = mrb_str_to_str(mrb, mrb_argv[argc_current - 1]);
-    argv[argc_current] = RSTRING_PTR(curr);
-    argvlen[argc_current] = RSTRING_LEN(curr);
-  }
-
-  errno = 0;
-  redisReply *reply = redisCommandArgv(context, argc, argv, argvlen);
-  if (likely(reply != NULL)) {
-    mrb_value reply_cptr_value = mrb_cptr_value(mrb, reply);
-    return mrb_ensure(mrb, mrb_redisCommandArgv_cb, reply_cptr_value, mrb_redisCommandArgv_ensure, reply_cptr_value);
+      errno = 0;
+      redisReply *reply = redisCommandArgv(context, argc, argv, argvlen);
+      if (likely(reply != NULL)) {
+        mrb_value reply_cptr_value = mrb_cptr_value(mrb, reply);
+        return mrb_ensure(mrb, mrb_redisCommandArgv_cb, reply_cptr_value, mrb_redisCommandArgv_ensure, reply_cptr_value);
+      } else {
+        mrb_hiredis_check_error(context, mrb);
+        return mrb_false_value();
+      }
+    } else {
+      mrb_hiredis_check_error(context, mrb);
+      return mrb_false_value();
+    }
   } else {
-    mrb_hiredis_check_error(context, mrb);
+    mrb_raise(mrb, E_IO_ERROR, "closed stream");
+    return mrb_false_value();
   }
-
-  return mrb_nil_value();
 }
 
 static mrb_value
 mrb_redisAppendCommandArgv(mrb_state *mrb, mrb_value self)
 {
   redisContext *context = (redisContext *) DATA_PTR(self);
-  if (!context) {
-    mrb_raise(mrb, E_IO_ERROR, "closed stream");
-  }
+  if (likely(context)) {
+    if (likely(context->err == 0)) {
+      mrb_sym command;
+      mrb_value *mrb_argv;
+      mrb_int argc = 0;
 
-  mrb_sym command;
-  mrb_value *mrb_argv;
-  mrb_int argc = 0;
+      mrb_get_args(mrb, "n*", &command, &mrb_argv, &argc);
+      argc++;
 
-  mrb_get_args(mrb, "n*", &command, &mrb_argv, &argc);
-  argc++;
+      const char *argv[argc];
+      size_t argvlen[argc];
+      mrb_int command_len;
+      argv[0] = mrb_sym2name_len(mrb, command, &command_len);
+      argvlen[0] = command_len;
 
-  const char *argv[argc];
-  size_t argvlen[argc];
-  mrb_int command_len;
-  argv[0] = mrb_sym2name_len(mrb, command, &command_len);
-  argvlen[0] = command_len;
+      mrb_int argc_current;
+      for (argc_current = 1; argc_current < argc; argc_current++) {
+        mrb_value curr = mrb_str_to_str(mrb, mrb_argv[argc_current - 1]);
+        argv[argc_current] = RSTRING_PTR(curr);
+        argvlen[argc_current] = RSTRING_LEN(curr);
+      }
 
-  mrb_int argc_current;
-  for (argc_current = 1; argc_current < argc; argc_current++) {
-    mrb_value curr = mrb_str_to_str(mrb, mrb_argv[argc_current - 1]);
-    argv[argc_current] = RSTRING_PTR(curr);
-    argvlen[argc_current] = RSTRING_LEN(curr);
-  }
+      mrb_sym queue_counter_sym = mrb_intern_lit(mrb, "queue_counter");
+      mrb_value queue_counter_val = mrb_iv_get(mrb, self, queue_counter_sym);
+      mrb_int queue_counter = 1;
+      if (mrb_fixnum_p(queue_counter_val)) {
+        queue_counter = mrb_fixnum(queue_counter_val);
+        if (unlikely(mrb_int_add_overflow(queue_counter, 1, &queue_counter))) {
+          mrb_raise(mrb, E_RUNTIME_ERROR, "integer addition would overflow");
+        }
+      }
 
-  mrb_sym queue_counter_sym = mrb_intern_lit(mrb, "queue_counter");
-  mrb_value queue_counter_val = mrb_iv_get(mrb, self, queue_counter_sym);
-  mrb_int queue_counter = 1;
-  if (mrb_fixnum_p(queue_counter_val)) {
-    queue_counter = mrb_fixnum(queue_counter_val);
-    if (unlikely(mrb_int_add_overflow(queue_counter, 1, &queue_counter))) {
-      mrb_raise(mrb, E_RUNTIME_ERROR, "integer addition would overflow");
+
+      errno = 0;
+      int rc = redisAppendCommandArgv(context, argc, argv, argvlen);
+      if (likely(rc == REDIS_OK)) {
+        mrb_iv_set(mrb, self, queue_counter_sym, mrb_fixnum_value(queue_counter));
+        return self;
+      } else {
+        mrb_hiredis_check_error(context, mrb);
+        return mrb_false_value();
+      }
+    } else {
+      mrb_hiredis_check_error(context, mrb);
+      return mrb_false_value();
     }
-  }
-
-
-  errno = 0;
-  int rc = redisAppendCommandArgv(context, argc, argv, argvlen);
-  if (likely(rc == REDIS_OK)) {
-    mrb_iv_set(mrb, self, queue_counter_sym, mrb_fixnum_value(queue_counter));
   } else {
-    mrb_hiredis_check_error(context, mrb);
+    mrb_raise(mrb, E_IO_ERROR, "closed stream");
+    return mrb_false_value();
   }
-
-  return self;
 }
 
 MRB_INLINE mrb_value
@@ -287,25 +302,30 @@ static mrb_value
 mrb_redisGetReply(mrb_state *mrb, mrb_value self)
 {
   redisContext *context = (redisContext *) DATA_PTR(self);
-  if (!context) {
-    mrb_raise(mrb, E_IO_ERROR, "closed stream");
-  }
-
-  redisReply *reply = NULL;
-  errno = 0;
-  int rc = redisGetReply(context, (void **) &reply);
-  if (likely(rc == REDIS_OK)) {
-    if (reply != NULL) {
-      mrb_redisGetReply_cb_data cb_data = { self, reply };
-      mrb_value cb_data_val = mrb_cptr_value(mrb, &cb_data);
-      return mrb_ensure(mrb, mrb_redisGetReply_cb, cb_data_val, mrb_redisGetReply_ensure, cb_data_val);
+  if (likely(context)) {
+    if (likely(context->err == 0)) {
+      redisReply *reply = NULL;
+      errno = 0;
+      int rc = redisGetReply(context, (void **) &reply);
+      if (likely(rc == REDIS_OK)) {
+        if (reply != NULL) {
+          mrb_redisGetReply_cb_data cb_data = { self, reply };
+          mrb_value cb_data_val = mrb_cptr_value(mrb, &cb_data);
+          return mrb_ensure(mrb, mrb_redisGetReply_cb, cb_data_val, mrb_redisGetReply_ensure, cb_data_val);
+        } else {
+          return mrb_nil_value();
+        }
+      } else {
+        mrb_hiredis_check_error(context, mrb);
+        return mrb_false_value();
+      }
     } else {
-      return mrb_nil_value();
+      mrb_hiredis_check_error(context, mrb);
+      return mrb_false_value();
     }
   } else {
-    mrb_hiredis_check_error(context, mrb);
-    // Cannot happen, if it unlikely does the interpreter crashes.
-    return mrb_undef_value();
+    mrb_raise(mrb, E_IO_ERROR, "closed stream");
+    return mrb_false_value();
   }
 }
 
@@ -314,22 +334,23 @@ mrb_redisGetBulkReply(mrb_state *mrb, mrb_value self)
 {
   mrb_value queue_counter_val = mrb_iv_get(mrb, self, mrb_intern_lit(mrb, "queue_counter"));
 
-  if (unlikely(!mrb_fixnum_p(queue_counter_val))) {
+  if (likely(mrb_fixnum_p(queue_counter_val))) {
+    mrb_int queue_counter = mrb_fixnum(queue_counter_val);
+
+    mrb_value bulk_reply = mrb_ary_new_capa(mrb, queue_counter);
+    int ai = mrb_gc_arena_save(mrb);
+
+    do {
+      mrb_value reply = mrb_redisGetReply(mrb, self);
+      mrb_ary_push(mrb, bulk_reply, reply);
+      mrb_gc_arena_restore(mrb, ai);
+    } while (--queue_counter > 0);
+
+    return bulk_reply;
+  } else {
     mrb_raise(mrb, E_RUNTIME_ERROR, "nothing queued yet");
+    return mrb_false_value();
   }
-
-  mrb_int queue_counter = mrb_fixnum(queue_counter_val);
-
-  mrb_value bulk_reply = mrb_ary_new_capa(mrb, queue_counter);
-  int ai = mrb_gc_arena_save(mrb);
-
-  do {
-    mrb_value reply = mrb_redisGetReply(mrb, self);
-    mrb_ary_push(mrb, bulk_reply, reply);
-    mrb_gc_arena_restore(mrb, ai);
-  } while (--queue_counter > 0);
-
-  return bulk_reply;
 }
 
 #if ((HIREDIS_MAJOR == 0) && (HIREDIS_MINOR >= 13) || (HIREDIS_MAJOR > 0))
@@ -337,18 +358,28 @@ static mrb_value
 mrb_redisReconnect(mrb_state *mrb, mrb_value self)
 {
   redisContext *context = (redisContext *) DATA_PTR(self);
-  if (!context) {
+  if (likely(context)) {
+    int rc = redisReconnect(context);
+    if (likely(rc == REDIS_OK)) {
+      return self;
+    } else {
+      mrb_hiredis_check_error(context, mrb);
+      return mrb_false_value();
+    }
+  } else {
     mrb_raise(mrb, E_IO_ERROR, "closed stream");
+    return mrb_false_value();
   }
-
-  int rc = redisReconnect(context);
-  if (unlikely(rc == REDIS_ERR)) {
-    mrb_hiredis_check_error(context, mrb);
-  }
-
-  return self;
 }
 #endif
+
+MRB_INLINE void
+mrb_hiredis_dataCleanup(void *privdata)
+{
+  mrb_hiredis_async_context *mrb_async_context = (mrb_hiredis_async_context *) privdata;
+  mrb_data_init(mrb_async_context->self, NULL, NULL);
+  mrb_free(mrb_async_context->mrb, privdata);
+}
 
 MRB_INLINE void
 mrb_hiredis_addRead(void *privdata)
@@ -439,13 +470,30 @@ mrb_hiredis_delWrite(void *privdata)
 }
 
 MRB_INLINE void
+mrb_hiredis_cleanup(void *privdata)
+{
+  mrb_assert(privdata);
+
+  mrb_hiredis_async_context *mrb_async_context = (mrb_hiredis_async_context *) privdata;
+  mrb_state *mrb = mrb_async_context->mrb;
+  mrb_assert(mrb);
+  int ai = mrb_gc_arena_save(mrb);
+
+  mrb_value block = mrb_iv_get(mrb, mrb_async_context->callbacks, mrb_intern_lit(mrb, "@cleanup"));
+  if (likely(mrb_type(block) == MRB_TT_PROC)) {
+    mrb_value argv[] = {
+      mrb_async_context->self,
+      mrb_async_context->evloop
+    };
+    mrb_yield_argv(mrb, block, 2, argv);
+    mrb_gc_arena_restore(mrb, ai);
+  }
+}
+
+MRB_INLINE void
 mrb_redisDisconnectCallback(const struct redisAsyncContext *async_context, int status)
 {
-  if (async_context->c.flags & REDIS_FREEING) {
-    return;
-  }
-
-  mrb_hiredis_async_context *mrb_async_context = (mrb_hiredis_async_context *) async_context->ev.data;
+  mrb_hiredis_async_context *mrb_async_context = (mrb_hiredis_async_context *) async_context->data;
   mrb_state *mrb = mrb_async_context->mrb;
   mrb_assert(mrb);
   int ai = mrb_gc_arena_save(mrb);
@@ -461,19 +509,12 @@ mrb_redisDisconnectCallback(const struct redisAsyncContext *async_context, int s
     mrb_yield_argv(mrb, block, 3, argv);
     mrb_gc_arena_restore(mrb, ai);
   }
-
-  mrb_data_init(mrb_async_context->self, NULL, NULL);
-  mrb_free(mrb, mrb_async_context);
 }
 
 MRB_INLINE void
 mrb_redisConnectCallback(const struct redisAsyncContext *async_context, int status)
 {
-  if (async_context->c.flags & REDIS_FREEING) {
-    return;
-  }
-
-  mrb_hiredis_async_context *mrb_async_context = (mrb_hiredis_async_context *) async_context->ev.data;
+  mrb_hiredis_async_context *mrb_async_context = (mrb_hiredis_async_context *) async_context->data;
   mrb_state *mrb = mrb_async_context->mrb;
   mrb_assert(mrb);
   int ai = mrb_gc_arena_save(mrb);
@@ -488,11 +529,6 @@ mrb_redisConnectCallback(const struct redisAsyncContext *async_context, int stat
 
     mrb_yield_argv(mrb, block, 3, argv);
     mrb_gc_arena_restore(mrb, ai);
-  }
-
-  if (unlikely(status == REDIS_ERR)) {
-    mrb_data_init(mrb_async_context->self, NULL, NULL);
-    mrb_free(mrb, mrb_async_context);
   }
 }
 
@@ -515,11 +551,13 @@ mrb_hiredis_setup_async_context(mrb_state *mrb, mrb_value self, mrb_value callba
   mrb_async_context->replies = replies;
   mrb_async_context->subscriptions = subscriptions;
 
-  async_context->ev.data = mrb_async_context;
+  async_context->data = async_context->ev.data = mrb_async_context;
+  async_context->dataCleanup = mrb_hiredis_dataCleanup;
   async_context->ev.addRead = mrb_hiredis_addRead;
   async_context->ev.delRead = mrb_hiredis_delRead;
   async_context->ev.addWrite = mrb_hiredis_addWrite;
   async_context->ev.delWrite = mrb_hiredis_delWrite;
+  async_context->ev.cleanup = mrb_hiredis_cleanup;
   redisAsyncSetDisconnectCallback(async_context, mrb_redisDisconnectCallback);
   redisAsyncSetConnectCallback(async_context, mrb_redisConnectCallback);
 }
@@ -551,145 +589,153 @@ mrb_redisAsyncConnect(mrb_state *mrb, mrb_value self)
   }
   if (likely(async_context != NULL)) {
     mrb_data_init(self, async_context, &mrb_redisAsyncContext_type);
-    mrb_hiredis_check_error(&async_context->c, mrb);
-    mrb_hiredis_setup_async_context(mrb, self, callbacks, evloop, async_context);
+    if (likely(async_context->c.err == 0)) {
+      mrb_hiredis_setup_async_context(mrb, self, callbacks, evloop, async_context);
+      return self;
+    } else {
+      mrb_hiredis_check_error(&async_context->c, mrb);
+      return mrb_false_value();
+    }
   } else {
     mrb_sys_fail(mrb, "redisAsyncConnect");
+    return mrb_false_value();
   }
-
-  return self;
 }
 
 static mrb_value
 mrb_redisAsyncHandleRead(mrb_state *mrb, mrb_value self)
 {
   redisAsyncContext *async_context = (redisAsyncContext *) DATA_PTR(self);
-  if (!async_context) {
+  if (likely(async_context)) {
+    redisAsyncHandleRead(async_context);
+    return self;
+  } else {
     mrb_raise(mrb, E_IO_ERROR, "closed stream");
+    return mrb_false_value();
   }
-  redisAsyncHandleRead(async_context);
-
-  return self;
 }
 
 static mrb_value
 mrb_redisAsyncHandleWrite(mrb_state *mrb, mrb_value self)
 {
   redisAsyncContext *async_context = (redisAsyncContext *) DATA_PTR(self);
-  if (!async_context) {
+  if (likely(async_context)) {
+    redisAsyncHandleWrite(async_context);
+    return self;
+  } else {
     mrb_raise(mrb, E_IO_ERROR, "closed stream");
+    return mrb_false_value();
   }
-  redisAsyncHandleWrite(async_context);
-
-  return self;
 }
 
 MRB_INLINE void
 mrb_redisCallbackFn(struct redisAsyncContext *async_context, void *r, void *privdata)
 {
-  if (async_context->c.flags & (REDIS_DISCONNECTING | REDIS_FREEING))
-    return;
-
-  mrb_hiredis_async_context *mrb_async_context = (mrb_hiredis_async_context *)async_context->ev.data;
+  mrb_hiredis_async_context *mrb_async_context = (mrb_hiredis_async_context *) async_context->data;
   mrb_state *mrb = mrb_async_context->mrb;
+
   mrb_assert(mrb);
   int ai = mrb_gc_arena_save(mrb);
-  mrb_value reply = mrb_nil_value();
-  if (r) {
-    reply = mrb_hiredis_get_reply((redisReply *)r, mrb);
-  }
-  mrb_value block_data = mrb_obj_value(privdata);
-  mrb_funcall(mrb, mrb_async_context->replies, "delete", 1, block_data);
-  mrb_value block = *(mrb_value*)DATA_PTR(block_data);
 
+  mrb_value block_cb_data = mrb_obj_value(privdata);
+  mrb_funcall(mrb, mrb_async_context->replies, "delete", 1, block_cb_data);
+  mrb_value block = *(mrb_value*)DATA_PTR(block_cb_data);
   if (likely(mrb_type(block) == MRB_TT_PROC)) {
+    mrb_value reply = mrb_nil_value();
+    if (likely(r)) {
+      reply = mrb_hiredis_get_reply((redisReply *)r, mrb);
+    }
     mrb_yield(mrb, block, reply);
-    mrb_gc_arena_restore(mrb, ai);
   }
+  mrb_gc_arena_restore(mrb, ai);
 }
 
 static mrb_value
 mrb_redisAsyncCommandArgv(mrb_state *mrb, mrb_value self)
 {
   redisAsyncContext *async_context = (redisAsyncContext *) DATA_PTR(self);
-  if (!async_context) {
-    mrb_raise(mrb, E_IO_ERROR, "closed stream");
-  }
-  mrb_sym command;
-  mrb_value *mrb_argv;
-  mrb_int argc = 0;
-  mrb_value block = mrb_nil_value();
+  if (likely(async_context)) {
+    mrb_sym command;
+    mrb_value *mrb_argv;
+    mrb_int argc = 0;
+    mrb_value block = mrb_nil_value();
 
-  mrb_get_args(mrb, "n*&", &command, &mrb_argv, &argc, &block);
-  argc++;
+    mrb_get_args(mrb, "n*&", &command, &mrb_argv, &argc, &block);
+    argc++;
 
-  const char *argv[argc];
-  size_t argvlen[argc];
-  mrb_int command_len;
-  argv[0] = mrb_sym2name_len(mrb, command, &command_len);
-  argvlen[0] = command_len;
+    const char *argv[argc];
+    size_t argvlen[argc];
+    mrb_int command_len;
+    argv[0] = mrb_sym2name_len(mrb, command, &command_len);
+    argvlen[0] = command_len;
 
-  mrb_int argc_current;
-  for (argc_current = 1; argc_current < argc; argc_current++) {
-    mrb_value curr = mrb_str_to_str(mrb, mrb_argv[argc_current - 1]);
-    argv[argc_current] = RSTRING_PTR(curr);
-    argvlen[argc_current] = RSTRING_LEN(curr);
-  }
+    mrb_int argc_current;
+    for (argc_current = 1; argc_current < argc; argc_current++) {
+      mrb_value curr = mrb_str_to_str(mrb, mrb_argv[argc_current - 1]);
+      argv[argc_current] = RSTRING_PTR(curr);
+      argvlen[argc_current] = RSTRING_LEN(curr);
+    }
 
-  errno = 0;
-  int rc = REDIS_ERR;
-  if (mrb_type(block) == MRB_TT_PROC) {
-    mrb_value *block_p;
-    struct RData *block_cb_data_p;
-    Data_Make_Struct(mrb, mrb_class_get_under(mrb, mrb_obj_class(mrb, self), "_BlockData"), mrb_value, &mrb_redisCallbackFn_cb_data_type, block_p, block_cb_data_p);
-    memcpy(block_p, &block, sizeof(mrb_value));
-    mrb_value block_cb_data = mrb_obj_value(block_cb_data_p);
-    mrb_iv_set(mrb, block_cb_data, mrb_intern_lit(mrb, "block"), block);
-    rc = redisAsyncCommandArgv(async_context, mrb_redisCallbackFn, block_cb_data_p, argc, argv, argvlen);
+    errno = 0;
+    int rc = REDIS_ERR;
+    if (mrb_type(block) == MRB_TT_PROC) {
+      mrb_value *block_p;
+      struct RData *block_cb_data_p;
+      Data_Make_Struct(mrb, mrb_class_get_under(mrb, mrb_obj_class(mrb, self), "_BlockData"), mrb_value, &mrb_redisCallbackFn_cb_data_type, block_p, block_cb_data_p);
+      memcpy(block_p, &block, sizeof(mrb_value));
+      mrb_value block_cb_data = mrb_obj_value(block_cb_data_p);
+      mrb_iv_set(mrb, block_cb_data, mrb_intern_lit(mrb, "block"), block);
+      rc = redisAsyncCommandArgv(async_context, mrb_redisCallbackFn, block_cb_data_p, argc, argv, argvlen);
+      if (likely(rc == REDIS_OK)) {
+        if ((command_len == 9 && strncasecmp(argv[0], "subscribe", command_len) == 0)||
+          (command_len == 10 && strncasecmp(argv[0], "psubscribe", command_len) == 0)) {
+          if (argc == 2) {
+            mrb_hash_set(mrb, ((mrb_hiredis_async_context *) async_context->ev.data)->subscriptions, mrb_argv[0], block_cb_data);
+          } else {
+            mrb_raise(mrb, E_ARGUMENT_ERROR, "hiredis only supports one topic Subscribtions");
+          }
+        }
+        else if ((command_len == 11 && strncasecmp(argv[0], "unsubscribe", command_len) == 0)||
+          (command_len == 12 && strncasecmp(argv[0], "punsubscribe", command_len) == 0)) {
+          if (argc == 2) {
+            mrb_hash_delete_key(mrb, ((mrb_hiredis_async_context *) async_context->ev.data)->subscriptions, mrb_argv[0]);
+          } else {
+            mrb_raise(mrb, E_ARGUMENT_ERROR, "hiredis only supports one topic Subscribtions");
+          }
+        }
+        else if (command_len == 7 && strncasecmp(argv[0], "monitor", command_len) == 0) {
+          mrb_iv_set(mrb, self, mrb_intern_lit(mrb, "monitor"), block_cb_data);
+        }
+        else {
+          mrb_ary_push(mrb, ((mrb_hiredis_async_context *) async_context->ev.data)->replies, block_cb_data);
+        }
+      }
+    } else {
+      rc = redisAsyncCommandArgv(async_context, NULL, NULL, argc, argv, argvlen);
+    }
     if (likely(rc == REDIS_OK)) {
-      if ((command_len == 9 && strncasecmp(argv[0], "subscribe", command_len) == 0)||
-        (command_len == 10 && strncasecmp(argv[0], "psubscribe", command_len) == 0)) {
-        if (argc == 2) {
-          mrb_hash_set(mrb, ((mrb_hiredis_async_context *) async_context->ev.data)->subscriptions, mrb_argv[0], block_cb_data);
-        } else {
-          mrb_raise(mrb, E_ARGUMENT_ERROR, "hiredis only supports one topic Subscribtions");
-        }
-      }
-      else if ((command_len == 11 && strncasecmp(argv[0], "unsubscribe", command_len) == 0)||
-        (command_len == 12 && strncasecmp(argv[0], "punsubscribe", command_len) == 0)) {
-        if (argc == 2) {
-          mrb_hash_delete_key(mrb, ((mrb_hiredis_async_context *) async_context->ev.data)->subscriptions, mrb_argv[0]);
-        } else {
-          mrb_raise(mrb, E_ARGUMENT_ERROR, "hiredis only supports one topic Subscribtions");
-        }
-      }
-      else if (command_len == 7 && strncasecmp(argv[0], "monitor", command_len) == 0) {
-        mrb_iv_set(mrb, self, mrb_intern_lit(mrb, "monitor"), block_cb_data);
-      }
-      else {
-        mrb_ary_push(mrb, ((mrb_hiredis_async_context *) async_context->ev.data)->replies, block_cb_data);
-      }
+      return self;
+    } else {
+      mrb_hiredis_check_error(&async_context->c, mrb);
+      return mrb_false_value();
     }
   } else {
-    rc = redisAsyncCommandArgv(async_context, NULL, NULL, argc, argv, argvlen);
+    mrb_raise(mrb, E_IO_ERROR, "closed stream");
+    return mrb_false_value();
   }
-  if (unlikely(rc == REDIS_ERR)) {
-    mrb_hiredis_check_error(&async_context->c, mrb);
-  }
-
-  return self;
 }
 
 static mrb_value
 mrb_redisAsyncDisconnect(mrb_state *mrb, mrb_value self)
 {
   redisAsyncContext *async_context = (redisAsyncContext *) DATA_PTR(self);
-  if (!async_context) {
+  if (likely(async_context)) {
+    redisAsyncDisconnect(async_context);
+    return mrb_nil_value();
+  } else {
     mrb_raise(mrb, E_IO_ERROR, "closed stream");
+    return mrb_false_value();
   }
-  redisAsyncDisconnect(async_context);
-
-  return mrb_nil_value();
 }
 
 void

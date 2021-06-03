@@ -23,29 +23,29 @@ assert("Pipelined commands") do
 
   hiredis.queue(:nonexistant)
   assert_kind_of(Hiredis::ReplyError, hiredis.reply)
-  hiredis.del("mruby-hiredis-test:foo")
+  hiredis.call(:del, "mruby-hiredis-test:foo")
 end
 
 assert("Hiredis#transaction") do
   hiredis = Hiredis.new
   ret = hiredis.transaction([:set, "mruby-hiredis-test:foo", "bar"], [:get, "mruby-hiredis-test:foo"])
   assert_equal(["OK", "QUEUED", "QUEUED", ["OK", "bar"]], ret)
-  hiredis.del("mruby-hiredis-test:foo")
+  hiredis.call(:del, "mruby-hiredis-test:foo")
 end
 
-assert("Hiredis#get") do
+assert("Hiredis#[]") do
   hiredis = Hiredis.new
-  assert_nil(hiredis.get("nonexistant"))
+  assert_nil(hiredis["nonexistant"])
   hiredis["mruby-hiredis-test:foo"] = "bar"
-  assert_equal("bar", hiredis.get("mruby-hiredis-test:foo"))
-  hiredis.del("mruby-hiredis-test:foo")
+  assert_equal("bar", hiredis["mruby-hiredis-test:foo"])
+  hiredis.call(:del, "mruby-hiredis-test:foo")
 end
 
 assert("Hiredis#incr") do
   hiredis = Hiredis.new
-  hiredis.del("mruby-hiredis-test:foo")
-  assert_equal(1, hiredis.incr("mruby-hiredis-test:foo"))
-  hiredis.del("mruby-hiredis-test:foo")
+  hiredis.call(:del, "mruby-hiredis-test:foo")
+  assert_equal(1, hiredis.call(:incr, "mruby-hiredis-test:foo"))
+  hiredis.call(:del, "mruby-hiredis-test:foo")
 end
 
 assert("Hiredis::Async") do
