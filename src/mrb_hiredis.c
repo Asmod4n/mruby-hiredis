@@ -4,23 +4,21 @@
 static void
 mrb_hiredis_check_error(const redisContext *context, mrb_state *mrb)
 {
-  if (context->err != 0) {
-    switch (context->err) {
-    case REDIS_ERR_IO:
-      mrb_sys_fail(mrb, context->errstr);
-      break;
-    case REDIS_ERR_EOF:
-      mrb_raise(mrb, E_EOF_ERROR, context->errstr);
-      break;
-    case REDIS_ERR_PROTOCOL:
-      mrb_raise(mrb, E_HIREDIS_ERR_PROTOCOL, context->errstr);
-      break;
-    case REDIS_ERR_OOM:
-      mrb_raise(mrb, E_HIREDIS_ERR_OOM, context->errstr);
-      break;
-    default:
-      mrb_raise(mrb, E_HIREDIS_ERROR, context->errstr);
-    }
+  switch (context->err) {
+  case REDIS_ERR_IO:
+    mrb_sys_fail(mrb, context->errstr);
+    break;
+  case REDIS_ERR_EOF:
+    mrb_raise(mrb, E_EOF_ERROR, context->errstr);
+    break;
+  case REDIS_ERR_PROTOCOL:
+    mrb_raise(mrb, E_HIREDIS_ERR_PROTOCOL, context->errstr);
+    break;
+  case REDIS_ERR_OOM:
+    mrb_raise(mrb, E_HIREDIS_ERR_OOM, context->errstr);
+    break;
+  default:
+    mrb_raise(mrb, E_HIREDIS_ERROR, context->errstr);
   }
 }
 
@@ -179,23 +177,15 @@ mrb_redisCommandArgv(mrb_state *mrb, mrb_value self)
       mrb_int argc = 0;
 
       mrb_get_args(mrb, "n*", &command, &mrb_argv, &argc);
-      argc++;
 
-      const char *argv[argc];
-      size_t argvlen[argc];
-      mrb_int command_len;
-      argv[0] = mrb_sym2name_len(mrb, command, &command_len);
-      argvlen[0] = command_len;
-
-      mrb_int argc_current;
-      for (argc_current = 1; argc_current < argc; argc_current++) {
-        mrb_value curr = mrb_str_to_str(mrb, mrb_argv[argc_current - 1]);
-        argv[argc_current] = RSTRING_PTR(curr);
-        argvlen[argc_current] = RSTRING_LEN(curr);
-      }
+      const char **argv = NULL;
+      size_t *argvlen = NULL;
+      mrb_hiredis_generate_argv_argc_array(mrb, command, mrb_argv, &argc, &argv, &argvlen);
 
       errno = 0;
       redisReply *reply = redisCommandArgv(context, argc, argv, argvlen);
+      mrb_free(mrb, argv);
+      mrb_free(mrb, argvlen);
       if (likely(reply != NULL)) {
         mrb_value reply_cptr_value = mrb_cptr_value(mrb, reply);
         return mrb_ensure(mrb, mrb_redisCommandArgv_cb, reply_cptr_value, mrb_redisCommandArgv_ensure, reply_cptr_value);
@@ -224,20 +214,6 @@ mrb_redisAppendCommandArgv(mrb_state *mrb, mrb_value self)
       mrb_int argc = 0;
 
       mrb_get_args(mrb, "n*", &command, &mrb_argv, &argc);
-      argc++;
-
-      const char *argv[argc];
-      size_t argvlen[argc];
-      mrb_int command_len;
-      argv[0] = mrb_sym2name_len(mrb, command, &command_len);
-      argvlen[0] = command_len;
-
-      mrb_int argc_current;
-      for (argc_current = 1; argc_current < argc; argc_current++) {
-        mrb_value curr = mrb_str_to_str(mrb, mrb_argv[argc_current - 1]);
-        argv[argc_current] = RSTRING_PTR(curr);
-        argvlen[argc_current] = RSTRING_LEN(curr);
-      }
 
       mrb_sym queue_counter_sym = mrb_intern_lit(mrb, "queue_counter");
       mrb_value queue_counter_val = mrb_iv_get(mrb, self, queue_counter_sym);
@@ -249,9 +225,14 @@ mrb_redisAppendCommandArgv(mrb_state *mrb, mrb_value self)
         }
       }
 
+      const char **argv = NULL;
+      size_t *argvlen = NULL;
+      mrb_hiredis_generate_argv_argc_array(mrb, command, mrb_argv, &argc, &argv, &argvlen);
 
       errno = 0;
       int rc = redisAppendCommandArgv(context, argc, argv, argvlen);
+      mrb_free(mrb, argv);
+      mrb_free(mrb, argvlen);
       if (likely(rc == REDIS_OK)) {
         mrb_iv_set(mrb, self, queue_counter_sym, mrb_fixnum_value(queue_counter));
         return self;
@@ -308,7 +289,7 @@ mrb_redisGetReply(mrb_state *mrb, mrb_value self)
       errno = 0;
       int rc = redisGetReply(context, (void **) &reply);
       if (likely(rc == REDIS_OK)) {
-        if (reply != NULL) {
+        if (likely(reply != NULL)) {
           mrb_redisGetReply_cb_data cb_data = { self, reply };
           mrb_value cb_data_val = mrb_cptr_value(mrb, &cb_data);
           return mrb_ensure(mrb, mrb_redisGetReply_cb, cb_data_val, mrb_redisGetReply_ensure, cb_data_val);
@@ -532,7 +513,7 @@ mrb_redisConnectCallback(const struct redisAsyncContext *async_context, int stat
   }
 }
 
-MRB_INLINE void
+MRB_INLINE mrb_value
 mrb_hiredis_setup_async_context(mrb_state *mrb, mrb_value self, mrb_value callbacks, mrb_value evloop, redisAsyncContext *async_context)
 {
   mrb_iv_set(mrb, self, mrb_intern_lit(mrb, "@callbacks"), callbacks);
@@ -560,6 +541,8 @@ mrb_hiredis_setup_async_context(mrb_state *mrb, mrb_value self, mrb_value callba
   async_context->ev.cleanup = mrb_hiredis_cleanup;
   redisAsyncSetDisconnectCallback(async_context, mrb_redisDisconnectCallback);
   redisAsyncSetConnectCallback(async_context, mrb_redisConnectCallback);
+
+  return self;
 }
 
 static mrb_value
@@ -590,8 +573,7 @@ mrb_redisAsyncConnect(mrb_state *mrb, mrb_value self)
   if (likely(async_context != NULL)) {
     mrb_data_init(self, async_context, &mrb_redisAsyncContext_type);
     if (likely(async_context->c.err == 0)) {
-      mrb_hiredis_setup_async_context(mrb, self, callbacks, evloop, async_context);
-      return self;
+      return mrb_hiredis_setup_async_context(mrb, self, callbacks, evloop, async_context);
     } else {
       mrb_hiredis_check_error(&async_context->c, mrb);
       return mrb_false_value();
@@ -661,20 +643,6 @@ mrb_redisAsyncCommandArgv(mrb_state *mrb, mrb_value self)
     mrb_value block = mrb_nil_value();
 
     mrb_get_args(mrb, "n*&", &command, &mrb_argv, &argc, &block);
-    argc++;
-
-    const char *argv[argc];
-    size_t argvlen[argc];
-    mrb_int command_len;
-    argv[0] = mrb_sym2name_len(mrb, command, &command_len);
-    argvlen[0] = command_len;
-
-    mrb_int argc_current;
-    for (argc_current = 1; argc_current < argc; argc_current++) {
-      mrb_value curr = mrb_str_to_str(mrb, mrb_argv[argc_current - 1]);
-      argv[argc_current] = RSTRING_PTR(curr);
-      argvlen[argc_current] = RSTRING_LEN(curr);
-    }
 
     errno = 0;
     int rc = REDIS_ERR;
@@ -685,7 +653,13 @@ mrb_redisAsyncCommandArgv(mrb_state *mrb, mrb_value self)
       memcpy(block_p, &block, sizeof(mrb_value));
       mrb_value block_cb_data = mrb_obj_value(block_cb_data_p);
       mrb_iv_set(mrb, block_cb_data, mrb_intern_lit(mrb, "block"), block);
+      const char **argv = NULL;
+      size_t *argvlen = NULL;
+      mrb_hiredis_generate_argv_argc_array(mrb, command, mrb_argv, &argc, &argv, &argvlen);
       rc = redisAsyncCommandArgv(async_context, mrb_redisCallbackFn, block_cb_data_p, argc, argv, argvlen);
+      mrb_free(mrb, argv);
+      mrb_int command_len = argvlen[0];
+      mrb_free(mrb, argvlen);
       if (likely(rc == REDIS_OK)) {
         if ((command_len == 9 && strncasecmp(argv[0], "subscribe", command_len) == 0)||
           (command_len == 10 && strncasecmp(argv[0], "psubscribe", command_len) == 0)) {
@@ -711,7 +685,12 @@ mrb_redisAsyncCommandArgv(mrb_state *mrb, mrb_value self)
         }
       }
     } else {
+      const char **argv = NULL;
+      size_t *argvlen = NULL;
+      mrb_hiredis_generate_argv_argc_array(mrb, command, mrb_argv, &argc, &argv, &argvlen);
       rc = redisAsyncCommandArgv(async_context, NULL, NULL, argc, argv, argvlen);
+      mrb_free(mrb, argv);
+      mrb_free(mrb, argvlen);
     }
     if (likely(rc == REDIS_OK)) {
       return self;
