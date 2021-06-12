@@ -8,6 +8,7 @@ class Hiredis
         create_shortcuts(instance)
         self.created_shortcuts = true
       end
+      instance.call(:hello, "3")
       instance
     end
 

@@ -83,6 +83,8 @@ mrb_hiredis_get_reply(redisReply *reply, mrb_state *mrb)
         return mrb_str_new(mrb, reply->str, reply->len);
         break;
       case REDIS_REPLY_ARRAY:
+      case REDIS_REPLY_SET:
+      case REDIS_REPLY_PUSH:
         return mrb_hiredis_get_ary_reply(reply, mrb);
         break;
       case REDIS_REPLY_MAP:
@@ -90,10 +92,7 @@ mrb_hiredis_get_reply(redisReply *reply, mrb_state *mrb)
         return mrb_hiredis_get_map_reply(reply, mrb);
         break;
       case REDIS_REPLY_INTEGER: {
-        if (FIXABLE(reply->integer))
-          return mrb_fixnum_value(reply->integer);
-        else
-          return mrb_float_value(mrb, reply->integer);
+        return mrb_int_value(mrb, reply->integer);
       } break;
       case REDIS_REPLY_NIL:
         return mrb_nil_value();
@@ -115,7 +114,7 @@ mrb_hiredis_get_reply(redisReply *reply, mrb_state *mrb)
         return mrb_obj_new(mrb, mrb_class_get_under(mrb, mrb_class_get(mrb, "Hiredis"), "Verb"), 2, argv);
       } break;
       default:
-        mrb_raise(mrb, E_HIREDIS_ERROR, "unknown reply type");
+        mrb_raisef(mrb, E_HIREDIS_ERROR, "unknown reply type %S", mrb_int_value(mrb, reply->type));
     }
   } else {
     return mrb_nil_value();
@@ -218,8 +217,8 @@ mrb_redisAppendCommandArgv(mrb_state *mrb, mrb_value self)
       mrb_sym queue_counter_sym = mrb_intern_lit(mrb, "queue_counter");
       mrb_value queue_counter_val = mrb_iv_get(mrb, self, queue_counter_sym);
       mrb_int queue_counter = 1;
-      if (mrb_fixnum_p(queue_counter_val)) {
-        queue_counter = mrb_fixnum(queue_counter_val);
+      if (mrb_integer_p(queue_counter_val)) {
+        queue_counter = mrb_integer(queue_counter_val);
         if (unlikely(mrb_int_add_overflow(queue_counter, 1, &queue_counter))) {
           mrb_raise(mrb, E_RUNTIME_ERROR, "integer addition would overflow");
         }
@@ -234,7 +233,7 @@ mrb_redisAppendCommandArgv(mrb_state *mrb, mrb_value self)
       mrb_free(mrb, argv);
       mrb_free(mrb, argvlen);
       if (likely(rc == REDIS_OK)) {
-        mrb_iv_set(mrb, self, queue_counter_sym, mrb_fixnum_value(queue_counter));
+        mrb_iv_set(mrb, self, queue_counter_sym, mrb_int_value(mrb, queue_counter));
         return self;
       } else {
         mrb_hiredis_check_error(context, mrb);
@@ -258,13 +257,13 @@ mrb_redisGetReply_cb(mrb_state *mrb, mrb_value self_reply)
   mrb_sym queue_counter_sym = mrb_intern_lit(mrb, "queue_counter");
   mrb_value queue_counter_val = mrb_iv_get(mrb, self, queue_counter_sym);
   mrb_int queue_counter = -1;
-  if (mrb_fixnum_p(queue_counter_val)) {
+  if (mrb_integer_p(queue_counter_val)) {
     queue_counter = mrb_fixnum(queue_counter_val);
   }
 
   mrb_value reply_val = mrb_hiredis_get_reply(cb_data->reply, mrb);
   if (queue_counter > 1) {
-    mrb_iv_set(mrb, self, queue_counter_sym, mrb_fixnum_value(--queue_counter));
+    mrb_iv_set(mrb, self, queue_counter_sym, mrb_int_value(mrb, --queue_counter));
   } else {
     mrb_iv_remove(mrb, self, queue_counter_sym);
   }
@@ -315,7 +314,7 @@ mrb_redisGetBulkReply(mrb_state *mrb, mrb_value self)
 {
   mrb_value queue_counter_val = mrb_iv_get(mrb, self, mrb_intern_lit(mrb, "queue_counter"));
 
-  if (likely(mrb_fixnum_p(queue_counter_val))) {
+  if (likely(mrb_integer_p(queue_counter_val))) {
     mrb_int queue_counter = mrb_fixnum(queue_counter_val);
 
     mrb_value bulk_reply = mrb_ary_new_capa(mrb, queue_counter);
@@ -377,7 +376,7 @@ mrb_hiredis_addRead(void *privdata)
     mrb_value argv[] = {
       mrb_async_context->self,
       mrb_async_context->evloop,
-      mrb_fixnum_value(mrb_async_context->fd)
+      mrb_int_value(mrb, mrb_async_context->fd)
     };
     mrb_yield_argv(mrb, block, 3, argv);
     mrb_gc_arena_restore(mrb, ai);
@@ -399,7 +398,7 @@ mrb_hiredis_delRead(void *privdata)
     mrb_value argv[] = {
       mrb_async_context->self,
       mrb_async_context->evloop,
-      mrb_fixnum_value(mrb_async_context->fd)
+      mrb_int_value(mrb, mrb_async_context->fd)
     };
     mrb_yield_argv(mrb, block, 3, argv);
     mrb_gc_arena_restore(mrb, ai);
@@ -421,7 +420,7 @@ mrb_hiredis_addWrite(void *privdata)
     mrb_value argv[] = {
       mrb_async_context->self,
       mrb_async_context->evloop,
-      mrb_fixnum_value(mrb_async_context->fd)
+      mrb_int_value(mrb, mrb_async_context->fd)
     };
     mrb_yield_argv(mrb, block, 3, argv);
     mrb_gc_arena_restore(mrb, ai);
@@ -443,7 +442,7 @@ mrb_hiredis_delWrite(void *privdata)
     mrb_value argv[] = {
       mrb_async_context->self,
       mrb_async_context->evloop,
-      mrb_fixnum_value(mrb_async_context->fd)
+      mrb_int_value(mrb, mrb_async_context->fd)
     };
     mrb_yield_argv(mrb, block, 3, argv);
     mrb_gc_arena_restore(mrb, ai);
@@ -484,7 +483,7 @@ mrb_redisDisconnectCallback(const struct redisAsyncContext *async_context, int s
     mrb_value argv[] = {
       mrb_async_context->self,
       mrb_async_context->evloop,
-      mrb_fixnum_value(status)
+      mrb_int_value(mrb, status)
     };
 
     mrb_yield_argv(mrb, block, 3, argv);
@@ -505,7 +504,7 @@ mrb_redisConnectCallback(const struct redisAsyncContext *async_context, int stat
     mrb_value argv[] = {
       mrb_async_context->self,
       mrb_async_context->evloop,
-      mrb_fixnum_value(status)
+      mrb_int_value(mrb, status)
     };
 
     mrb_yield_argv(mrb, block, 3, argv);
@@ -650,7 +649,7 @@ mrb_redisAsyncCommandArgv(mrb_state *mrb, mrb_value self)
       mrb_value *block_p;
       struct RData *block_cb_data_p;
       Data_Make_Struct(mrb, mrb_class_get_under(mrb, mrb_obj_class(mrb, self), "_BlockData"), mrb_value, &mrb_redisCallbackFn_cb_data_type, block_p, block_cb_data_p);
-      memcpy(block_p, &block, sizeof(mrb_value));
+      memcpy(block_p, &block, sizeof(block_p));
       mrb_value block_cb_data = mrb_obj_value(block_cb_data_p);
       mrb_iv_set(mrb, block_cb_data, mrb_intern_lit(mrb, "block"), block);
       const char **argv = NULL;
