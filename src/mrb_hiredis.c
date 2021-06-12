@@ -650,7 +650,7 @@ mrb_redisAsyncCommandArgv(mrb_state *mrb, mrb_value self)
       mrb_value *block_p;
       struct RData *block_cb_data_p;
       Data_Make_Struct(mrb, mrb_class_get_under(mrb, mrb_obj_class(mrb, self), "_BlockData"), mrb_value, &mrb_redisCallbackFn_cb_data_type, block_p, block_cb_data_p);
-      memcpy(block_p, &block, sizeof(mrb_value));
+      memcpy(block_p, &block, sizeof(block_p));
       mrb_value block_cb_data = mrb_obj_value(block_cb_data_p);
       mrb_iv_set(mrb, block_cb_data, mrb_intern_lit(mrb, "block"), block);
       const char **argv = NULL;
