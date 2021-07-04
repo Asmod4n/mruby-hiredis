@@ -2,7 +2,7 @@
 mruby:
   version: 3.0.0
   release_no: 30000
-  git_commit: 843abc5c7b21f652b2e7809831f0b999e11c9431
+  git_commit: e462b42ff05254f8142662c24b426b5af3b98173
 builds:
   host:
     https://github.com/iij/mruby-errno.git:

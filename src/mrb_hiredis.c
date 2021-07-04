@@ -258,7 +258,7 @@ mrb_redisGetReply_cb(mrb_state *mrb, mrb_value self_reply)
   mrb_value queue_counter_val = mrb_iv_get(mrb, self, queue_counter_sym);
   mrb_int queue_counter = -1;
   if (mrb_integer_p(queue_counter_val)) {
-    queue_counter = mrb_fixnum(queue_counter_val);
+    queue_counter = mrb_integer(queue_counter_val);
   }
 
   mrb_value reply_val = mrb_hiredis_get_reply(cb_data->reply, mrb);
@@ -315,7 +315,7 @@ mrb_redisGetBulkReply(mrb_state *mrb, mrb_value self)
   mrb_value queue_counter_val = mrb_iv_get(mrb, self, mrb_intern_lit(mrb, "queue_counter"));
 
   if (likely(mrb_integer_p(queue_counter_val))) {
-    mrb_int queue_counter = mrb_fixnum(queue_counter_val);
+    mrb_int queue_counter = mrb_integer(queue_counter_val);
 
     mrb_value bulk_reply = mrb_ary_new_capa(mrb, queue_counter);
     int ai = mrb_gc_arena_save(mrb);
@@ -376,7 +376,7 @@ mrb_hiredis_addRead(void *privdata)
     mrb_value argv[] = {
       mrb_async_context->self,
       mrb_async_context->evloop,
-      mrb_int_value(mrb, mrb_async_context->fd)
+      mrb_async_context->fd
     };
     mrb_yield_argv(mrb, block, 3, argv);
     mrb_gc_arena_restore(mrb, ai);
@@ -398,7 +398,7 @@ mrb_hiredis_delRead(void *privdata)
     mrb_value argv[] = {
       mrb_async_context->self,
       mrb_async_context->evloop,
-      mrb_int_value(mrb, mrb_async_context->fd)
+      mrb_async_context->fd
     };
     mrb_yield_argv(mrb, block, 3, argv);
     mrb_gc_arena_restore(mrb, ai);
@@ -420,7 +420,7 @@ mrb_hiredis_addWrite(void *privdata)
     mrb_value argv[] = {
       mrb_async_context->self,
       mrb_async_context->evloop,
-      mrb_int_value(mrb, mrb_async_context->fd)
+      mrb_async_context->fd
     };
     mrb_yield_argv(mrb, block, 3, argv);
     mrb_gc_arena_restore(mrb, ai);
@@ -442,7 +442,7 @@ mrb_hiredis_delWrite(void *privdata)
     mrb_value argv[] = {
       mrb_async_context->self,
       mrb_async_context->evloop,
-      mrb_int_value(mrb, mrb_async_context->fd)
+      mrb_async_context->fd
     };
     mrb_yield_argv(mrb, block, 3, argv);
     mrb_gc_arena_restore(mrb, ai);
@@ -527,7 +527,7 @@ mrb_hiredis_setup_async_context(mrb_state *mrb, mrb_value self, mrb_value callba
   mrb_async_context->self = self;
   mrb_async_context->callbacks = callbacks;
   mrb_async_context->evloop = evloop;
-  mrb_async_context->fd = async_context->c.fd;
+  mrb_async_context->fd = mrb_int_value(mrb, async_context->c.fd);
   mrb_async_context->replies = replies;
   mrb_async_context->subscriptions = subscriptions;
 

@@ -100,11 +100,10 @@ typedef struct {
   mrb_value self;
   mrb_value callbacks;
   mrb_value evloop;
-  int fd;
+  mrb_value fd;
   mrb_value replies;
   mrb_value subscriptions;
 } mrb_hiredis_async_context;
-
 
 static void
 mrb_redisAsyncFree_gc(mrb_state *mrb, void *p)
@@ -116,7 +115,7 @@ mrb_redisAsyncFree_gc(mrb_state *mrb, void *p)
 }
 
 static const struct mrb_data_type mrb_redisAsyncContext_type = {
-  "$i_mrb_redisContext_type", mrb_redisAsyncFree_gc
+  "$i_mrb_redisAsyncContext_type", mrb_redisAsyncFree_gc
 };
 
 #endif
