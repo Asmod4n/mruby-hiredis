@@ -100,7 +100,7 @@ typedef struct {
   mrb_value self;
   mrb_value callbacks;
   mrb_value evloop;
-  mrb_value fd;
+  redisAsyncContext *async_context;
   mrb_value replies;
   mrb_value subscriptions;
 } mrb_hiredis_async_context;

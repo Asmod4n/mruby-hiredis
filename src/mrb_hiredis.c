@@ -72,7 +72,7 @@ mrb_hiredis_get_ary_reply(redisReply *reply, mrb_state *mrb);
 MRB_INLINE mrb_value
 mrb_hiredis_get_map_reply(redisReply *reply, mrb_state *mrb);
 
-MRB_INLINE mrb_value
+static mrb_value
 mrb_hiredis_get_reply(redisReply *reply, mrb_state *mrb)
 {
   if (likely(reply)) {
@@ -91,9 +91,9 @@ mrb_hiredis_get_reply(redisReply *reply, mrb_state *mrb)
       case REDIS_REPLY_ATTR:
         return mrb_hiredis_get_map_reply(reply, mrb);
         break;
-      case REDIS_REPLY_INTEGER: {
+      case REDIS_REPLY_INTEGER:
         return mrb_int_value(mrb, reply->integer);
-      } break;
+        break;
       case REDIS_REPLY_NIL:
         return mrb_nil_value();
         break;
@@ -215,6 +215,7 @@ mrb_redisAppendCommandArgv(mrb_state *mrb, mrb_value self)
       mrb_get_args(mrb, "n*", &command, &mrb_argv, &argc);
 
       mrb_sym queue_counter_sym = mrb_intern_lit(mrb, "queue_counter");
+
       mrb_value queue_counter_val = mrb_iv_get(mrb, self, queue_counter_sym);
       mrb_int queue_counter = 1;
       if (mrb_integer_p(queue_counter_val)) {
@@ -321,8 +322,7 @@ mrb_redisGetBulkReply(mrb_state *mrb, mrb_value self)
     int ai = mrb_gc_arena_save(mrb);
 
     do {
-      mrb_value reply = mrb_redisGetReply(mrb, self);
-      mrb_ary_push(mrb, bulk_reply, reply);
+      mrb_ary_push(mrb, bulk_reply, mrb_redisGetReply(mrb, self));
       mrb_gc_arena_restore(mrb, ai);
     } while (--queue_counter > 0);
 
@@ -376,7 +376,7 @@ mrb_hiredis_addRead(void *privdata)
     mrb_value argv[] = {
       mrb_async_context->self,
       mrb_async_context->evloop,
-      mrb_async_context->fd
+      mrb_int_value(mrb, mrb_async_context->async_context->c.fd)
     };
     mrb_yield_argv(mrb, block, 3, argv);
     mrb_gc_arena_restore(mrb, ai);
@@ -398,7 +398,7 @@ mrb_hiredis_delRead(void *privdata)
     mrb_value argv[] = {
       mrb_async_context->self,
       mrb_async_context->evloop,
-      mrb_async_context->fd
+      mrb_int_value(mrb, mrb_async_context->async_context->c.fd)
     };
     mrb_yield_argv(mrb, block, 3, argv);
     mrb_gc_arena_restore(mrb, ai);
@@ -420,7 +420,7 @@ mrb_hiredis_addWrite(void *privdata)
     mrb_value argv[] = {
       mrb_async_context->self,
       mrb_async_context->evloop,
-      mrb_async_context->fd
+      mrb_int_value(mrb, mrb_async_context->async_context->c.fd)
     };
     mrb_yield_argv(mrb, block, 3, argv);
     mrb_gc_arena_restore(mrb, ai);
@@ -442,7 +442,7 @@ mrb_hiredis_delWrite(void *privdata)
     mrb_value argv[] = {
       mrb_async_context->self,
       mrb_async_context->evloop,
-      mrb_async_context->fd
+      mrb_int_value(mrb, mrb_async_context->async_context->c.fd)
     };
     mrb_yield_argv(mrb, block, 3, argv);
     mrb_gc_arena_restore(mrb, ai);
@@ -527,7 +527,7 @@ mrb_hiredis_setup_async_context(mrb_state *mrb, mrb_value self, mrb_value callba
   mrb_async_context->self = self;
   mrb_async_context->callbacks = callbacks;
   mrb_async_context->evloop = evloop;
-  mrb_async_context->fd = mrb_int_value(mrb, async_context->c.fd);
+  mrb_async_context->async_context = async_context;
   mrb_async_context->replies = replies;
   mrb_async_context->subscriptions = subscriptions;
 
@@ -613,6 +613,7 @@ MRB_INLINE void
 mrb_redisCallbackFn(struct redisAsyncContext *async_context, void *r, void *privdata)
 {
   mrb_hiredis_async_context *mrb_async_context = (mrb_hiredis_async_context *) async_context->data;
+  mrb_assert(mrb_async_context);
   mrb_state *mrb = mrb_async_context->mrb;
 
   mrb_assert(mrb);
@@ -620,6 +621,7 @@ mrb_redisCallbackFn(struct redisAsyncContext *async_context, void *r, void *priv
 
   mrb_value block_cb_data = mrb_obj_value(privdata);
   mrb_funcall(mrb, mrb_async_context->replies, "delete", 1, block_cb_data);
+  mrb_iv_remove(mrb, block_cb_data, mrb_intern_lit(mrb, "block"));
   mrb_value block = *(mrb_value*)DATA_PTR(block_cb_data);
   if (likely(mrb_type(block) == MRB_TT_PROC)) {
     mrb_value reply = mrb_nil_value();
@@ -662,7 +664,7 @@ mrb_redisAsyncCommandArgv(mrb_state *mrb, mrb_value self)
       if (likely(rc == REDIS_OK)) {
         if ((command_len == 9 && strncasecmp(argv[0], "subscribe", command_len) == 0)||
           (command_len == 10 && strncasecmp(argv[0], "psubscribe", command_len) == 0)) {
-          if (argc == 2) {
+          if (likely(argc == 2)) {
             mrb_hash_set(mrb, ((mrb_hiredis_async_context *) async_context->ev.data)->subscriptions, mrb_argv[0], block_cb_data);
           } else {
             mrb_raise(mrb, E_ARGUMENT_ERROR, "hiredis only supports one topic Subscribtions");
@@ -670,7 +672,7 @@ mrb_redisAsyncCommandArgv(mrb_state *mrb, mrb_value self)
         }
         else if ((command_len == 11 && strncasecmp(argv[0], "unsubscribe", command_len) == 0)||
           (command_len == 12 && strncasecmp(argv[0], "punsubscribe", command_len) == 0)) {
-          if (argc == 2) {
+          if (likely(argc == 2)) {
             mrb_hash_delete_key(mrb, ((mrb_hiredis_async_context *) async_context->ev.data)->subscriptions, mrb_argv[0]);
           } else {
             mrb_raise(mrb, E_ARGUMENT_ERROR, "hiredis only supports one topic Subscribtions");
@@ -746,6 +748,7 @@ mrb_mruby_hiredis_gem_init(mrb_state* mrb)
   mrb_define_method(mrb, hiredis_async_class, "write",      mrb_redisAsyncHandleWrite,  MRB_ARGS_NONE());
   mrb_define_method(mrb, hiredis_async_class, "queue",      mrb_redisAsyncCommandArgv,  (MRB_ARGS_REQ(1)|MRB_ARGS_REST()|MRB_ARGS_BLOCK()));
   mrb_define_method(mrb, hiredis_async_class, "disconnect", mrb_redisAsyncDisconnect,   MRB_ARGS_NONE());
+  mrb_define_alias (mrb, hiredis_async_class, "close", "disconnect");
   hiredis_async_block_data_class = mrb_define_class_under(mrb, hiredis_async_class, "_BlockData", mrb->object_class);
   MRB_SET_INSTANCE_TT(hiredis_async_block_data_class, MRB_TT_DATA);
 }

@@ -30,6 +30,9 @@ class Hiredis
     end
     queue(:exec)
     bulk_reply
+  rescue => e
+    call(:discard)
+    raise e
   end
 
   def [](key)
