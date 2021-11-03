@@ -2,7 +2,7 @@
 #include "mrb_hiredis.h"
 
 static void
-mrb_hiredis_check_error(const redisContext *context, mrb_state *mrb)
+mrb_hiredis_check_error(mrb_state *mrb, const redisContext *context)
 {
   switch (context->err) {
   case REDIS_ERR_IO:
@@ -43,7 +43,7 @@ mrb_redisConnect(mrb_state *mrb, mrb_value self)
     if (likely(context->err == 0)) {
       return self;
     } else {
-      mrb_hiredis_check_error(context, mrb);
+      mrb_hiredis_check_error(mrb, context);
       return mrb_false_value();
     }
   } else {
@@ -172,7 +172,7 @@ mrb_redisCommandArgv(mrb_state *mrb, mrb_value self)
   if (likely(context)) {
     if (likely(context->err == 0)) {
       mrb_sym command;
-      mrb_value *mrb_argv;
+      mrb_value *mrb_argv = NULL;
       mrb_int argc = 0;
 
       mrb_get_args(mrb, "n*", &command, &mrb_argv, &argc);
@@ -189,11 +189,11 @@ mrb_redisCommandArgv(mrb_state *mrb, mrb_value self)
         mrb_value reply_cptr_value = mrb_cptr_value(mrb, reply);
         return mrb_ensure(mrb, mrb_redisCommandArgv_cb, reply_cptr_value, mrb_redisCommandArgv_ensure, reply_cptr_value);
       } else {
-        mrb_hiredis_check_error(context, mrb);
+        mrb_hiredis_check_error(mrb, context);
         return mrb_false_value();
       }
     } else {
-      mrb_hiredis_check_error(context, mrb);
+      mrb_hiredis_check_error(mrb, context);
       return mrb_false_value();
     }
   } else {
@@ -209,7 +209,7 @@ mrb_redisAppendCommandArgv(mrb_state *mrb, mrb_value self)
   if (likely(context)) {
     if (likely(context->err == 0)) {
       mrb_sym command;
-      mrb_value *mrb_argv;
+      mrb_value *mrb_argv = NULL;
       mrb_int argc = 0;
 
       mrb_get_args(mrb, "n*", &command, &mrb_argv, &argc);
@@ -237,11 +237,11 @@ mrb_redisAppendCommandArgv(mrb_state *mrb, mrb_value self)
         mrb_iv_set(mrb, self, queue_counter_sym, mrb_int_value(mrb, queue_counter));
         return self;
       } else {
-        mrb_hiredis_check_error(context, mrb);
+        mrb_hiredis_check_error(mrb, context);
         return mrb_false_value();
       }
     } else {
-      mrb_hiredis_check_error(context, mrb);
+      mrb_hiredis_check_error(mrb, context);
       return mrb_false_value();
     }
   } else {
@@ -297,11 +297,11 @@ mrb_redisGetReply(mrb_state *mrb, mrb_value self)
           return mrb_nil_value();
         }
       } else {
-        mrb_hiredis_check_error(context, mrb);
+        mrb_hiredis_check_error(mrb, context);
         return mrb_false_value();
       }
     } else {
-      mrb_hiredis_check_error(context, mrb);
+      mrb_hiredis_check_error(mrb, context);
       return mrb_false_value();
     }
   } else {
@@ -343,7 +343,7 @@ mrb_redisReconnect(mrb_state *mrb, mrb_value self)
     if (likely(rc == REDIS_OK)) {
       return self;
     } else {
-      mrb_hiredis_check_error(context, mrb);
+      mrb_hiredis_check_error(mrb, context);
       return mrb_false_value();
     }
   } else {
@@ -574,7 +574,7 @@ mrb_redisAsyncConnect(mrb_state *mrb, mrb_value self)
     if (likely(async_context->c.err == 0)) {
       return mrb_hiredis_setup_async_context(mrb, self, callbacks, evloop, async_context);
     } else {
-      mrb_hiredis_check_error(&async_context->c, mrb);
+      mrb_hiredis_check_error(mrb, &async_context->c);
       return mrb_false_value();
     }
   } else {
@@ -619,10 +619,8 @@ mrb_redisCallbackFn(struct redisAsyncContext *async_context, void *r, void *priv
   mrb_assert(mrb);
   int ai = mrb_gc_arena_save(mrb);
 
-  mrb_value block_cb_data = mrb_obj_value(privdata);
-  mrb_funcall(mrb, mrb_async_context->replies, "delete", 1, block_cb_data);
-  mrb_iv_remove(mrb, block_cb_data, mrb_intern_lit(mrb, "block"));
-  mrb_value block = *(mrb_value*)DATA_PTR(block_cb_data);
+  mrb_value block = mrb_obj_value(privdata);
+  mrb_funcall(mrb, mrb_async_context->replies, "delete", 1, block);
   if (likely(mrb_type(block) == MRB_TT_PROC)) {
     mrb_value reply = mrb_nil_value();
     if (likely(r)) {
@@ -639,33 +637,29 @@ mrb_redisAsyncCommandArgv(mrb_state *mrb, mrb_value self)
   redisAsyncContext *async_context = (redisAsyncContext *) DATA_PTR(self);
   if (likely(async_context)) {
     mrb_sym command;
-    mrb_value *mrb_argv;
+    mrb_value *mrb_argv = NULL;
     mrb_int argc = 0;
     mrb_value block = mrb_nil_value();
 
     mrb_get_args(mrb, "n*&", &command, &mrb_argv, &argc, &block);
 
+    const char **argv;
+    size_t *argvlen;
+    mrb_hiredis_generate_argv_argc_array(mrb, command, mrb_argv, &argc, &argv, &argvlen);
+    int rc;
+
     errno = 0;
-    int rc = REDIS_ERR;
     if (mrb_type(block) == MRB_TT_PROC) {
-      mrb_value *block_p;
-      struct RData *block_cb_data_p;
-      Data_Make_Struct(mrb, mrb_class_get_under(mrb, mrb_obj_class(mrb, self), "_BlockData"), mrb_value, &mrb_redisCallbackFn_cb_data_type, block_p, block_cb_data_p);
-      *block_p = block;
-      mrb_value block_cb_data = mrb_obj_value(block_cb_data_p);
-      mrb_iv_set(mrb, block_cb_data, mrb_intern_lit(mrb, "block"), block);
-      const char **argv;
-      size_t *argvlen;
-      mrb_hiredis_generate_argv_argc_array(mrb, command, mrb_argv, &argc, &argv, &argvlen);
-      rc = redisAsyncCommandArgv(async_context, mrb_redisCallbackFn, block_cb_data_p, argc, argv, argvlen);
+      rc = redisAsyncCommandArgv(async_context, mrb_redisCallbackFn, mrb_ptr(block), argc, argv, argvlen);
       mrb_free(mrb, argv);
       mrb_int command_len = argvlen[0];
       mrb_free(mrb, argvlen);
+
       if (likely(rc == REDIS_OK)) {
         if ((command_len == 9 && strncasecmp(argv[0], "subscribe", command_len) == 0)||
           (command_len == 10 && strncasecmp(argv[0], "psubscribe", command_len) == 0)) {
           if (likely(argc == 2)) {
-            mrb_hash_set(mrb, ((mrb_hiredis_async_context *) async_context->ev.data)->subscriptions, mrb_argv[0], block_cb_data);
+            mrb_hash_set(mrb, ((mrb_hiredis_async_context *) async_context->ev.data)->subscriptions, mrb_argv[0], block);
           } else {
             mrb_raise(mrb, E_ARGUMENT_ERROR, "hiredis only supports one topic Subscribtions");
           }
@@ -679,26 +673,26 @@ mrb_redisAsyncCommandArgv(mrb_state *mrb, mrb_value self)
           }
         }
         else if (command_len == 7 && strncasecmp(argv[0], "monitor", command_len) == 0) {
-          mrb_iv_set(mrb, self, mrb_intern_lit(mrb, "monitor"), block_cb_data);
+          mrb_iv_set(mrb, self, mrb_intern_lit(mrb, "monitor"), block);
         }
         else {
-          mrb_ary_push(mrb, ((mrb_hiredis_async_context *) async_context->ev.data)->replies, block_cb_data);
+          mrb_ary_push(mrb, ((mrb_hiredis_async_context *) async_context->ev.data)->replies, block);
         }
       }
+
     } else {
-      const char **argv = NULL;
-      size_t *argvlen = NULL;
-      mrb_hiredis_generate_argv_argc_array(mrb, command, mrb_argv, &argc, &argv, &argvlen);
       rc = redisAsyncCommandArgv(async_context, NULL, NULL, argc, argv, argvlen);
       mrb_free(mrb, argv);
       mrb_free(mrb, argvlen);
     }
+
     if (likely(rc == REDIS_OK)) {
       return self;
     } else {
-      mrb_hiredis_check_error(&async_context->c, mrb);
+      mrb_hiredis_check_error(mrb, &async_context->c);
       return mrb_false_value();
     }
+
   } else {
     mrb_raise(mrb, E_IO_ERROR, "closed stream");
     return mrb_false_value();
@@ -720,8 +714,8 @@ mrb_redisAsyncDisconnect(mrb_state *mrb, mrb_value self)
 
 void
 mrb_mruby_hiredis_gem_init(mrb_state* mrb)
-{
-  struct RClass *hiredis_class, *hiredis_error_class, *hiredis_async_class, *hiredis_async_block_data_class;
+{ 
+  struct RClass *hiredis_class, *hiredis_error_class, *hiredis_async_class;
   hiredis_class = mrb_define_class(mrb, "Hiredis", mrb->object_class);
   MRB_SET_INSTANCE_TT(hiredis_class, MRB_TT_DATA);
 
@@ -749,8 +743,6 @@ mrb_mruby_hiredis_gem_init(mrb_state* mrb)
   mrb_define_method(mrb, hiredis_async_class, "queue",      mrb_redisAsyncCommandArgv,  (MRB_ARGS_REQ(1)|MRB_ARGS_REST()|MRB_ARGS_BLOCK()));
   mrb_define_method(mrb, hiredis_async_class, "disconnect", mrb_redisAsyncDisconnect,   MRB_ARGS_NONE());
   mrb_define_alias (mrb, hiredis_async_class, "close", "disconnect");
-  hiredis_async_block_data_class = mrb_define_class_under(mrb, hiredis_async_class, "_BlockData", mrb->object_class);
-  MRB_SET_INSTANCE_TT(hiredis_async_block_data_class, MRB_TT_DATA);
 }
 
 void mrb_mruby_hiredis_gem_final(mrb_state* mrb) {}

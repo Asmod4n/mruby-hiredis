@@ -19,6 +19,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#if (MRB_INT_BIT < 64)
+  #error "mruby-hiredis: MRB_INT64 must be defined in mrbconf.h"
+#endif
+
 #if (__GNUC__ >= 3) || (__INTEL_COMPILER >= 800) || defined(__clang__)
 # define likely(x) __builtin_expect(!!(x), 1)
 # define unlikely(x) __builtin_expect(!!(x), 0)
