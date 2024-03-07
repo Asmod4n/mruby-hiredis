@@ -1,17 +1,5 @@
 ---
 mruby:
-  version: 3.0.0
-  release_no: 30000
-  git_commit: e462b42ff05254f8142662c24b426b5af3b98173
-builds:
-  host:
-    https://github.com/iij/mruby-errno.git:
-      url: https://github.com/iij/mruby-errno.git
-      branch: HEAD
-      commit: b4415207ff6ea62360619c89a1cff83259dc4db0
-      version: 0.0.0
-    https://github.com/Asmod4n/mruby-redis-ae.git:
-      url: https://github.com/Asmod4n/mruby-redis-ae.git
-      branch: HEAD
-      commit: 757d41e01ba67e52d02efce665d8f4b19f6db8ad
-      version: 0.0.0
+  version: 3.3.0
+  release_no: 30300
+  git_commit: 9257a61b39d7825ba40efd693e3fa3d588f407d8

@@ -1,7 +1,8 @@
 MRUBY_CONFIG=File.expand_path(ENV["MRUBY_CONFIG"] || "build_config.rb")
 
 file :mruby do
-  sh "git clone --depth=1 https://github.com/mruby/mruby.git"
+  sh "git clone --recurse-submodules --depth=1 https://github.com/mruby/mruby.git"
+  sh "git submodule update --init --recursive"
 end
 
 desc "compile binary"
@@ -11,9 +12,6 @@ end
 
 desc "test"
 task :test => :mruby do
-  if ENV['TRAVIS_OS_NAME'] == 'osx'
-    sh "brew update && brew install redis && echo 'daemonize yes' >> /usr/local/etc/redis.conf && redis-server /usr/local/etc/redis.conf"
-  end
   sh "cd mruby && MRUBY_CONFIG=#{MRUBY_CONFIG} rake all test"
 end
 
