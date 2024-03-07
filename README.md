@@ -1,4 +1,3 @@
-[![Build Status](https://travis-ci.com/Asmod4n/mruby-hiredis.svg?branch=master)](https://travis-ci.com/Asmod4n/mruby-hiredis)
 # mruby-hiredis
 mruby bindings for https://github.com/redis/hiredis
 
